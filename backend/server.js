@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -5,6 +7,8 @@ import cookieParser from "cookie-parser";
 import authRoutes from "./routes/authRoutes.js";
 import gigRoutes from "./routes/gigRoutes.js";
 import bidRoutes from "./routes/bidRoutes.js";
+import profileRoutes from "./routes/profileRoutes.js";  
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 
 /* ===============================
@@ -12,7 +16,7 @@ import bidRoutes from "./routes/bidRoutes.js";
    =============================== */
 // ⚠️ This bypasses Windows dotenv issue
 // You will still provide .env.example in GitHub
-const MONGO_URI = "mongodb://127.0.0.1:27017/gigflowdb";
+const MONGO_URI = process.env.MONGO_URI;
 
 const app = express();
 
@@ -30,11 +34,14 @@ app.use(cors({
   credentials: true
 }));
 
+app.use("/uploads", express.static("uploads"));
+
 /* ---------- Routes ---------- */
 app.use("/api/auth", authRoutes);
 app.use("/api/gigs", gigRoutes);
 app.use("/api/bids", bidRoutes);
-
+app.use("/api/profile", profileRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 /* ---------- Database Connection ---------- */
 const connectDB = async () => {
@@ -55,7 +62,7 @@ app.get("/", (req, res) => {
 });
 
 /* ---------- Server ---------- */
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
