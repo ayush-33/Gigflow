@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import api from "../api/api";
 import "../styles/Auth.css";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading,  setLoading]  = useState(false);
@@ -14,31 +17,32 @@ export default function Login() {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const validate = () => {
+  if (!formData.email.trim()) return "Email is required.";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
+    return "Enter a valid email address.";
+  if (!formData.password) return "Password is required.";
+  return null;
+};
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const err = validate();
+    if (err) { setError(err); return; }
+
     setLoading(true);
     setError("");
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+      // ✅ api.post — no manual headers needed, withCredentials set globally
+      const { data } = await api.post("/auth/login", formData);
 
-      const data = await response.json();
+      // ✅ Backend sends accessToken (not token)
+      login(data.accessToken, data.user);
 
-      if (response.ok) {
-        localStorage.setItem("token", data.token);
-        if (data.user) localStorage.setItem("user", JSON.stringify(data.user));
-        navigate("/");
-        window.location.reload();
-      } else {
-        setError(data.message || "Login failed. Please try again.");
-      }
+      navigate("/");
     } catch (err) {
-      console.error("Login error:", err);
-      setError("Server error. Please try again later.");
+      setError(err.response?.data?.message || "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -48,23 +52,20 @@ export default function Login() {
     <div className="auth-page">
       <div className="auth-card">
 
-        {/* Logo */}
         <div className="auth-logo">
           <span className="auth-logo-text">GigFlow</span>
         </div>
 
-        {/* Header */}
         <div className="auth-header">
           <h1>Welcome back</h1>
           <p>Sign in to your GigFlow account</p>
         </div>
 
-        {/* Form */}
-        <form className="auth-form" onSubmit={handleSubmit}>
+        <form className="auth-form" onSubmit={handleSubmit} noValidate>
 
           <div className="form-group">
             <label htmlFor="email">Email address</label>
-            <div className="input-wrapper">
+            <div className={`input-wrapper${error && !formData.email ? " input-error" : ""}`}>
               <span className="input-icon">✉️</span>
               <input
                 id="email"
@@ -81,7 +82,7 @@ export default function Login() {
 
           <div className="form-group">
             <label htmlFor="password">Password</label>
-            <div className="input-wrapper">
+            <div className={`input-wrapper${error && !formData.password ? " input-error" : ""}`}>
               <span className="input-icon">🔒</span>
               <input
                 id="password"
@@ -96,15 +97,9 @@ export default function Login() {
             </div>
           </div>
 
-          {error && (
-            <p className="form-error">⚠ {error}</p>
-          )}
+          {error && <p className="form-error">⚠ {error}</p>}
 
-          <button
-            type="submit"
-            className="btn-auth"
-            disabled={loading}
-          >
+          <button type="submit" className="btn-auth" disabled={loading}>
             {loading ? "Signing in…" : "Sign In →"}
           </button>
 

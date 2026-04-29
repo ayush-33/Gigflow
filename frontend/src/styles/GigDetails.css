@@ -447,3 +447,22 @@
   .gig-meta-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
   .gig-title-main { font-size: 20px; }
 }
+
+.btn-message {
+  width: 100%;
+  padding: 12px;
+  background: #fff;
+  border: 2px solid var(--brand, #6366f1);
+  color: var(--brand, #6366f1);
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 8px;
+}
+
+.btn-message:hover {
+  background: var(--brand, #6366f1);
+  color: #fff;
+}

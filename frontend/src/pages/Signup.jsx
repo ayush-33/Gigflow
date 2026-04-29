@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import api from "../api/api";
 import "../styles/Auth.css";
 
 function getPasswordStrength(pw) {
@@ -37,44 +38,38 @@ export default function Signup() {
   const strength = getPasswordStrength(formData.password);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
+  e.preventDefault();
+  setError("");
 
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
+  if (formData.password !== formData.confirmPassword) {
+    setError("Passwords do not match.");
+    return;
+  }
 
-    setLoading(true);
-    try {
-      const response = await fetch("http://localhost:5000/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.fullName,
-          email: formData.email,
-          password: formData.password,
-        }),
-      });
+  if (formData.password.length < 6) {
+    setError("Password must be at least 6 characters.");
+    return;
+  }
 
-      const data = await response.json();
+  setLoading(true);
 
-      if (response.ok) {
-        navigate("/login");
-      } else {
-        setError(data.message || "Signup failed. Please try again.");
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Server error. Please try again later.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    await api.post("/auth/register", {
+      name: formData.fullName,
+      email: formData.email,
+      password: formData.password,
+    });
+
+    navigate("/login");
+
+  } catch (err) {
+    setError(
+      err.response?.data?.message || "Signup failed. Please try again."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="auth-page">

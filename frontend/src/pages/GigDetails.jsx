@@ -1,5 +1,10 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import api from "../api/api";
+import ReviewSection from "../components/ReviewSection";
+import { useAuth } from "../context/AuthContext";
+import ConfirmModal from "../components/ConfirmModal";
+
 import "../styles/GigDetails.css";
 
 function StarRating({ score = 4.5 }) {
@@ -8,64 +13,57 @@ function StarRating({ score = 4.5 }) {
   const empty = 5 - full - half;
   return (
     <span className="stars">
-      {"★".repeat(full)}
-      {half ? "½" : ""}
-      {"☆".repeat(empty)}
+      {"★".repeat(full)}{half ? "½" : ""}{"☆".repeat(empty)}
     </span>
   );
 }
 
 export default function GigDetails() {
-  const { id }     = useParams();
-  const navigate   = useNavigate();
+  const { id }   = useParams();
+  const navigate = useNavigate();
 
   const [gig,        setGig]        = useState(null);
-  const [alreadyBid, setAlreadyBid] = useState(false);
+  const [bidStatus,  setBidStatus]  = useState(null); // { isOwner, isAssigned, alreadyBid, bidCount }
   const [imgError,   setImgError]   = useState(false);
+  const [modal,      setModal]      = useState(null);
+  const [toast,      setToast]      = useState(null);
+  const { user } = useAuth();
 
-  const token  = localStorage.getItem("token");
-  const userId = localStorage.getItem("userId");
 
-  useEffect(() => {
-    const fetchGig = async () => {
-      try {
-        const res  = await fetch(`http://localhost:5000/api/gigs/${id}`);
-        const data = await res.json();
-        setGig(data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
+  const fetchData = useCallback(async () => {
+  try {
+    // Public
+    const { data: gigData } = await api.get(`/gigs/${id}`);
+    setGig(gigData);
 
-    const checkUserBid = async () => {
-      if (!token) return;
-      try {
-        const res  = await fetch(`http://localhost:5000/api/bids/check/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        setAlreadyBid(data.alreadyBid);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    fetchGig();
-    checkUserBid();
-  }, [id, token]);
-
-  const handleDelete = async () => {
-    if (!window.confirm("Delete this gig?")) return;
-    try {
-      await fetch(`http://localhost:5000/api/gigs/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      alert("Gig deleted");
-      navigate("/");
-    } catch (err) {
-      console.error(err);
+    // Protected
+    if (user) {
+      const { data: bsData } = await api.get(`/gigs/${id}/bid-status`);
+      setBidStatus(bsData);
     }
+
+  } catch (err) {
+    console.error(err);
+  }
+}, [id, user]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleDelete = () => {
+    setModal({
+      type: "danger",
+      title: "Delete this gig?",
+      body: "All bids on this gig will also be removed. This cannot be undone.",
+      confirmLabel: "Delete Gig",
+      onConfirm: async () => {
+        try {
+          await api.delete(`/gigs/${id}`);
+          navigate("/profile");
+        } catch (err) {
+          console.error(err);
+        }
+      },
+    });
   };
 
   const guessIcon = (title = "") => {
@@ -90,18 +88,27 @@ export default function GigDetails() {
     );
   }
 
-  const ownerId = typeof gig.ownerId === "object" ? gig.ownerId._id : gig.ownerId;
-  const isOwner = userId === ownerId;
-  const sellerName = gig.ownerId?.username || "Unknown Seller";
+  const sellerName = gig.ownerId?.username || gig.ownerId?.name || "Unknown Seller";
+  const rating = gig.rating || 0;
+const reviewCount = gig.reviewCount || 0;
 
-  /* stable-ish mock rating */
-  const rating      = gig.rating      ?? 4.8;
-  const reviewCount = gig.reviewCount ?? 47;
+  // ✅ FIX: image path — backend now stores ONLY filename, so prepend full URL here
+  const imageUrl = gig.image
+    ? gig.image.startsWith("/uploads/")
+      ? `http://localhost:5000${gig.image}`         // legacy: already has /uploads/
+      : `http://localhost:5000/uploads/${gig.image}` // new: just filename
+    : null;
+
+  // ✅ FIX: isAssigned is now visible to ALL visitors (not just owner)
+  const isAssigned = gig.status === "assigned";
+  const isOwner    = bidStatus?.isOwner ?? false;
+  const alreadyBid = bidStatus?.alreadyBid ?? false;
+  const bidCount   = gig.bidCount ?? bidStatus?.bidCount ?? 0;
 
   return (
     <div className="gig-details-page">
 
-      {/* ── Breadcrumb ── */}
+      {/* Breadcrumb */}
       <nav className="gig-breadcrumb">
         <button onClick={() => navigate("/")}>Home</button>
         <span>/</span>
@@ -115,18 +122,12 @@ export default function GigDetails() {
       <div className="gig-details-container">
         <div className="gig-details-grid">
 
-          {/* ── LEFT — Image + Seller ── */}
+          {/* LEFT */}
           <div className="gig-image-panel">
-
-            {/* Image */}
             <div className="gig-image-wrapper">
-              {!imgError ? (
+              {!imgError && imageUrl ? (
                 <>
-                  <img
-                    src={`http://localhost:5000/uploads/${gig.image}`}
-                    alt={gig.title}
-                    onError={() => setImgError(true)}
-                  />
+                  <img src={imageUrl} alt={gig.title} onError={() => setImgError(true)} />
                   <div className="gig-image-shimmer" />
                 </>
               ) : (
@@ -140,12 +141,19 @@ export default function GigDetails() {
                 <span className="gig-category-badge">{gig.category}</span>
               )}
 
-              <span className={`gig-status-badge ${gig.status}`}>
-                {gig.status === "open" ? "● Open" : "🔒 Hired"}
+              {/* ✅ FIX: status badge visible to ALL visitors */}
+              <span className={`gig-status-badge ${isAssigned ? "assigned" : "open"}`}>
+                {isAssigned ? "🔒 Hired" : "● Open"}
               </span>
+
+              {/* ✅ NEW: bid counter */}
+              {bidCount > 0 && (
+                <span className="gig-bid-count-badge">
+                  {bidCount} bid{bidCount !== 1 ? "s" : ""}
+                </span>
+              )}
             </div>
 
-            {/* Seller card */}
             <div className="seller-card">
               <div className="seller-avatar-lg">
                 {sellerName.charAt(0).toUpperCase()}
@@ -156,17 +164,12 @@ export default function GigDetails() {
               </div>
               <span className="seller-badge">Seller</span>
             </div>
-
           </div>
 
-          {/* ── RIGHT — Info + CTA ── */}
+          {/* RIGHT */}
           <div className="gig-info-panel">
-
-            {/* Header */}
             <div className="gig-header">
-              {gig.category && (
-                <p className="gig-category-line">{gig.category}</p>
-              )}
+              {gig.category && <p className="gig-category-line">{gig.category}</p>}
               <h1 className="gig-title-main">{gig.title}</h1>
               <div className="gig-rating-row">
                 <StarRating score={rating} />
@@ -177,7 +180,6 @@ export default function GigDetails() {
 
             <div className="gig-divider" />
 
-            {/* Description */}
             <div className="gig-description-block">
               <p className="block-label">About this gig</p>
               <p className="gig-description-text">{gig.description}</p>
@@ -185,7 +187,6 @@ export default function GigDetails() {
 
             <div className="gig-divider" />
 
-            {/* Meta stats */}
             <div className="gig-meta-grid">
               <div className="meta-stat">
                 <span className="meta-icon">💰</span>
@@ -197,43 +198,120 @@ export default function GigDetails() {
                 <span className="meta-label">Delivery</span>
                 <span className="meta-value delivery">{gig.deliveryTime}d</span>
               </div>
+              {bidCount > 0 && (
+                <div className="meta-stat">
+                  <span className="meta-icon">📊</span>
+                  <span className="meta-label">Bids received</span>
+                  <span className="meta-value">{bidCount}</span>
+                </div>
+              )}
             </div>
 
             {/* CTA card */}
             <div className="gig-cta-card">
 
-              {gig.status === "active" && (
-                <div className="taken-badge">🔒 Freelancer Already Hired</div>
+              {/* ✅ FIX: assigned status shown to ALL visitors */}
+              {isAssigned && (
+                <div className="taken-badge">
+                  🔒 A freelancer has already been hired for this gig
+                </div>
               )}
 
-              {token && !isOwner && !alreadyBid && gig.status === "open" && (
+              {isAssigned && isOwner && (
+  <button
+    className="btn-bid"
+    onClick={() =>
+      navigate("/checkout", {
+        state: {
+          gig,
+          bid: {
+            price: bidStatus?.acceptedPrice ?? gig.price
+          }
+        }
+      })
+    }
+  >
+    💳 Pay & Hire Now
+  </button>
+)}
+
+              {!user && !isAssigned && (
+                <button className="btn-bid" onClick={() => navigate("/login")}>
+                  Login to Place a Bid →
+                </button>
+              )}
+
+              {user && !isOwner && !alreadyBid && !isAssigned && (
                 <button className="btn-bid" onClick={() => navigate(`/gigs/${id}/bid`)}>
                   Place a Bid →
                 </button>
               )}
 
-              {token && !isOwner && alreadyBid && gig.status === "open" && (
+  {user && !isOwner && !isAssigned && (
+  <button
+    className="btn-message"
+    onClick={() =>
+      navigate("/chat", {
+        state: {
+          gigId: gig._id,
+          receiverId: gig.ownerId?._id,
+          gigTitle: gig.title,
+          gigPrice: gig.price,
+        }
+      })
+    }
+  >
+    💬 Message Seller
+  </button>
+)}
+
+              {user && !isOwner && alreadyBid && !isAssigned && (
                 <div className="btn-bid-submitted">
                   <span>✓</span> Bid Submitted
                 </div>
               )}
 
-              {token && isOwner && (
-                <button className="btn-delete" onClick={handleDelete}>
-                  Delete Gig
-                </button>
+              {user && !isOwner && alreadyBid && bidStatus?.bidStatus === "hired" && (
+                <div className="btn-bid-submitted" style={{ background: "#dcfce7", color: "#166534" }}>
+                  🎉 You were hired for this gig!
+                </div>
+              )}
+
+              { user && isOwner && (
+                <div style={{ display: "flex", gap: "0.75rem" }}>
+                  <button className="btn-bid" style={{ flex: 1 }} onClick={() => navigate(`/edit-gig/${id}`)}>
+                    ✏️ Edit Gig
+                  </button>
+                  <button className="btn-delete" onClick={handleDelete}>
+                    🗑 Delete
+                  </button>
+                </div>
               )}
 
               <p className="cta-note">
-                {gig.status === "open"
-                  ? "💡 Submit your best offer to get hired on this project."
-                  : "This gig is no longer accepting bids."}
+                {isAssigned
+                  ? "This gig is no longer accepting new bids."
+                  : bidCount > 0
+                    ? `💡 ${bidCount} freelancer${bidCount !== 1 ? "s have" : " has"} already bid. Submit your best offer!`
+                    : "💡 Be the first to bid on this project!"}
               </p>
             </div>
 
           </div>
         </div>
       </div>
+      {/* Reviews section */}
+
+          <div className="gig-details-container" style={{ marginTop: "0.5rem" }}>
+        <ReviewSection
+          gigId={id}
+          isOwner={isOwner}
+          gigStatus={gig.status}
+          user={user}
+        />
+      </div>
+
+      <ConfirmModal modal={modal} onClose={() => setModal(null)} />
     </div>
   );
 }

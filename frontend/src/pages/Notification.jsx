@@ -1,32 +1,48 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../api/api";
+import { useNotifications } from "../context/NotificationContext";
 import "../styles/Notifications.css";
 
-const MOCK_NOTIFICATIONS = [
-  { id: 1, type: "bid",     unread: true,  icon: "💼", tag: "Bid Received", message: "Alex submitted a bid of $45 on your Web Development gig",    sub: 'Proposal: "I can complete this in 3 days with full responsiveness..."', time: "2 min ago",  actions: [{ label: "View Bid", primary: true }, { label: "Decline" }] },
-  { id: 2, type: "hired",   unread: true,  icon: "🎉", tag: "Hired",        message: "Congratulations! Sarah hired you for the Logo Design project", sub: "Project starts immediately. Check your dashboard for details.",           time: "18 min ago", actions: [{ label: "View Project", primary: true }] },
-  { id: 3, type: "bid",     unread: true,  icon: "💼", tag: "Bid Received", message: "Mike placed a bid of $120 on your Mobile App gig",             sub: 'Proposal: "Full-stack developer with 5 years of React Native experience..."', time: "1 hr ago",   actions: [{ label: "View Bid", primary: true }, { label: "Decline" }] },
-  { id: 4, type: "message", unread: true,  icon: "💬", tag: "Message",      message: "Jordan sent you a message about your SEO Services gig",        sub: '"Hi, do you offer keyword research as part of the package?"',           time: "2 hrs ago",  actions: [{ label: "Reply", primary: true }] },
-  { id: 5, type: "payment", unread: true,  icon: "💰", tag: "Payment",      message: "Payment of $85 received for Graphic Design project",           sub: "Funds are now available in your wallet balance.",                        time: "3 hrs ago",  actions: [{ label: "View Wallet", primary: true }] },
-  { id: 6, type: "bid",     unread: false, icon: "💼", tag: "Bid Received", message: "Chris submitted a bid of $60 on your Content Writing gig",     sub: 'Proposal: "Native English writer with 200+ articles delivered..."',     time: "Yesterday",  actions: [{ label: "View Bid", primary: true }, { label: "Decline" }] },
-  { id: 7, type: "message", unread: false, icon: "💬", tag: "Message",      message: "Emma replied to your message in Music Production gig",         sub: '"Sure, I can add an extra revision for free."',                         time: "Yesterday",  actions: [{ label: "View Chat", primary: true }] },
-  { id: 8, type: "system",  unread: false, icon: "⚙️", tag: "System",       message: "Your profile has been verified successfully",                  sub: "You now have access to featured gig placements.",                       time: "2 days ago", actions: [] },
-];
+/* ── Type metadata ── */
+const TYPE_META = {
+  bidAccepted: { icon: "🎉", label: "Hired",    color: "hired"   },
+  bidRejected: { icon: "😞", label: "Rejected",  color: "rejected" },
+  message:     { icon: "💬", label: "Message",   color: "message"  },
+  default:     { icon: "🔔", label: "Update",    color: "system"   },
+};
+
+const getMeta = (type) => TYPE_META[type] || TYPE_META.default;
 
 const FILTERS = [
-  { key: "all",     label: "All"      },
-  { key: "unread",  label: "Unread"   },
-  { key: "bid",     label: "Bids"     },
-  { key: "message", label: "Messages" },
-  { key: "hired",   label: "Hired"    },
-  { key: "payment", label: "Payments" },
+  { key: "all",         label: "All"       },
+  { key: "unread",      label: "Unread"    },
+  { key: "bidAccepted", label: "Hired"     },
+  { key: "bidRejected", label: "Rejected"  },
+  { key: "message",     label: "Messages"  },
 ];
 
+/* ── Relative time ── */
+function relTime(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60)    return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60)    return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24)    return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7)     return `${d}d ago`;
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+/* ── Toast ── */
 function Toast({ toasts }) {
   return (
     <div className="toast-area">
-      {toasts.map(t => (
+      {toasts.map((t) => (
         <div key={t.id} className={`notif-toast ${t.type}`}>
-          <span style={{ fontSize: 16 }}>{t.type === "info" ? "ℹ️" : "✅"}</span>
+          <span style={{ fontSize: 15 }}>{t.type === "success" ? "✅" : "ℹ️"}</span>
           {t.message}
         </div>
       ))}
@@ -34,65 +50,100 @@ function Toast({ toasts }) {
   );
 }
 
+/* ── Confirm Modal ── */
+function ConfirmModal({ isOpen, title, body, onConfirm, onCancel }) {
+  if (!isOpen) return null;
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-title">{title}</div>
+        <div className="modal-body">{body}</div>
+        <div className="modal-actions">
+          <button className="modal-btn-cancel" onClick={onCancel}>Cancel</button>
+          <button className="modal-btn-confirm" onClick={onConfirm}>Confirm</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Notifications() {
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+  const navigate = useNavigate();
+  // ✅ FIX: use real notifications from context (backed by DB), not mock data
+const { notifications, markOneAsRead, markAllRead, fetchNotifications } = useNotifications();
+
   const [filter,   setFilter]   = useState("all");
   const [search,   setSearch]   = useState("");
-  const [removing, setRemoving] = useState([]);
+  const [removing, setRemoving] = useState(new Set());
   const [toasts,   setToasts]   = useState([]);
+  const [modal,    setModal]    = useState(null);
 
-  const showToast = (message, type = "info") => {
+
+  const showToast = useCallback((message, type = "success") => {
     const id = Date.now();
-    setToasts(p => [...p, { id, message, type }]);
-    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 2800);
-  };
+    setToasts((p) => [...p, { id, message, type }]);
+    setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 2800);
+  }, []);
 
-  const filtered = notifications.filter(n => {
-    if (filter === "unread" && !n.unread) return false;
+  /* ── Delete a single notification (DB) ── */
+  const deleteNotif = useCallback(async (id) => {
+  setRemoving((prev) => new Set([...prev, id]));
+  try {
+    await api.delete(`/notifications/${id}/delete`);
+
+    setTimeout(() => {
+      setRemoving((prev) => {
+        const s = new Set(prev);
+        s.delete(id);
+        return s;
+      });
+      fetchNotifications();
+    }, 300);
+
+    showToast("Notification removed");
+  } catch {
+    setRemoving((prev) => {
+      const s = new Set(prev);
+      s.delete(id);
+      return s;
+    });
+    showToast("Failed to remove", "error");
+  }
+}, [fetchNotifications, showToast]);
+
+  /* ── Clear all (DB) ── */
+  const clearAll = useCallback(async () => {
+  setModal({
+    title: "Clear all notifications",
+    body: "This will permanently delete all your notifications.",
+    onConfirm: async () => {
+      setModal(null);
+      try {
+        await api.delete("/notifications/clear-all");
+        fetchNotifications();
+        showToast("All notifications cleared");
+      } catch {
+        showToast("Failed to clear", "error");
+      }
+    }
+  });
+}, [fetchNotifications, showToast]);
+
+  /* ── Filtered list ── */
+  const filtered = notifications.filter((n) => {
+    if (filter === "unread" && n.isRead) return false;
     if (filter !== "all" && filter !== "unread" && n.type !== filter) return false;
-    if (search && !n.message.toLowerCase().includes(search) && !n.sub.toLowerCase().includes(search)) return false;
+    if (search && !n.message.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
   const counts = {
-    all:     notifications.length,
-    unread:  notifications.filter(n => n.unread).length,
-    bid:     notifications.filter(n => n.type === "bid").length,
-    message: notifications.filter(n => n.type === "message").length,
-    hired:   notifications.filter(n => n.type === "hired").length,
-    payment: notifications.filter(n => n.type === "payment").length,
+    all:         notifications.length,
+    unread:      notifications.filter((n) => !n.isRead).length,
+    bidAccepted: notifications.filter((n) => n.type === "bidAccepted").length,
+    bidRejected: notifications.filter((n) => n.type === "bidRejected").length,
+    message:     notifications.filter((n) => n.type === "message").length,
   };
-
-  const markRead = (id) => {
-    setNotifications(p => p.map(n => n.id === id ? { ...n, unread: false } : n));
-    showToast("Marked as read");
-  };
-
-  const deleteNotif = (id) => {
-    setRemoving(p => [...p, id]);
-    setTimeout(() => {
-      setNotifications(p => p.filter(n => n.id !== id));
-      setRemoving(p => p.filter(x => x !== id));
-      showToast("Notification removed");
-    }, 280);
-  };
-
-  const markAllRead = () => {
-    setNotifications(p => p.map(n => ({ ...n, unread: false })));
-    showToast("All notifications marked as read");
-  };
-
-  const clearAll = () => {
-    setNotifications([]);
-    showToast("All notifications cleared");
-  };
-
-  const handleCardClick = (n) => {
-    if (n.unread) markRead(n.id);
-  };
-
-  const typeClass = (type) =>
-    ({ bid: "bid", hired: "hired", review: "review", message: "message", system: "system", payment: "payment" }[type] || "system");
 
   return (
     <div className="notifications-page">
@@ -105,28 +156,52 @@ export default function Notifications() {
             <div>
               <h1 className="notifications-title">
                 Notifications
-                {counts.unread > 0 && <span className="unread-badge">{counts.unread}</span>}
+                {counts.unread > 0 && (
+                  <span className="unread-badge">{counts.unread}</span>
+                )}
               </h1>
-              <p className="page-subtitle">Stay updated on your gigs, bids, and messages</p>
+              <p className="page-subtitle">
+                Stay updated on your gigs, bids, and messages
+              </p>
             </div>
           </div>
           <div className="header-actions">
-            <button className="btn-ghost" onClick={markAllRead}>✓ Mark all read</button>
-            <button className="btn-danger-ghost" onClick={clearAll}>🗑 Clear all</button>
+            {counts.unread > 0 && (
+              <button className="btn-ghost" onClick={() => { markAllRead(); showToast("All marked as read"); }}>
+                ✓ Mark all read
+              </button>
+            )}
+            {notifications.length > 0 && (
+              <button className="btn-danger-ghost" onClick={clearAll}>
+                🗑 Clear all
+              </button>
+            )}
           </div>
         </div>
 
         {/* Stats */}
         <div className="stats-row">
-          <div className="stat-card"><div className="stat-label">Total</div><div className="stat-value">{notifications.length}</div></div>
-          <div className="stat-card"><div className="stat-label">Unread</div><div className="stat-value blue">{counts.unread}</div></div>
-          <div className="stat-card"><div className="stat-label">Bids</div><div className="stat-value amber">{counts.bid}</div></div>
-          <div className="stat-card"><div className="stat-label">Messages</div><div className="stat-value green">{counts.message}</div></div>
+          <div className="stat-card">
+            <div className="stat-label">Total</div>
+            <div className="stat-value">{notifications.length}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Unread</div>
+            <div className="stat-value blue">{counts.unread}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Hired</div>
+            <div className="stat-value green">{counts.bidAccepted}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Messages</div>
+            <div className="stat-value amber">{counts.message}</div>
+          </div>
         </div>
 
         {/* Filter bar */}
         <div className="filter-bar">
-          {FILTERS.map(f => (
+          {FILTERS.map((f) => (
             <button
               key={f.key}
               className={`filter-chip${filter === f.key ? " active" : ""}`}
@@ -143,71 +218,115 @@ export default function Notifications() {
               className="notif-search"
               placeholder="Search…"
               value={search}
-              onChange={e => setSearch(e.target.value.toLowerCase())}
+              onChange={(e) => setSearch(e.target.value)}
             />
+            {search && (
+              <button
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 13 }}
+                onClick={() => setSearch("")}
+              >✕</button>
+            )}
           </div>
         </div>
 
-        {/* List */}
+        {/* Notification list */}
         {filtered.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">🔕</div>
-            <div className="empty-title">No notifications</div>
-            <div className="empty-sub">You're all caught up! Notifications will appear here.</div>
+            <div className="empty-title">
+              {search ? "No matching notifications" : "You're all caught up!"}
+            </div>
+            <div className="empty-sub">
+              {search
+                ? `No notifications match "${search}"`
+                : "New notifications will appear here automatically."}
+            </div>
+            {search && (
+              <button className="empty-results-clear" onClick={() => setSearch("")}>
+                Clear search
+              </button>
+            )}
           </div>
         ) : (
           <div className="notif-list">
-            {filtered.map((n, i) => (
-              <div
-                key={n.id}
-                className={`notif-card${n.unread ? " unread" : ""}${removing.includes(n.id) ? " removing" : ""}`}
-                style={{ animationDelay: `${i * 0.04}s` }}
-                onClick={() => handleCardClick(n)}
-              >
-                <div className={`notif-icon-wrap ${typeClass(n.type)}`}>{n.icon}</div>
-
-                <div className="notif-body">
-                  <div className="notif-top">
-                    <div className="notif-message">{n.message}</div>
-                    <div className="notif-time">{n.time}</div>
+            {filtered.map((n, i) => {
+              const meta = getMeta(n.type);
+              return (
+                <div
+                  key={n._id}
+                  className={`notif-card${!n.isRead ? " unread" : ""}${removing.has(n._id) ? " removing" : ""}`}
+                  style={{ animationDelay: `${i * 0.04}s` }}
+                  onClick={() => {
+                    if (!n.isRead) markOneAsRead(n._id);
+                    if (n.link) navigate(n.link);
+                  }}
+                >
+                  <div className={`notif-icon-wrap ${meta.color}`}>
+                    {meta.icon}
                   </div>
-                  <div className="notif-sub">{n.sub}</div>
-                  <div className="notif-actions">
-                    <span className={`notif-tag tag-${typeClass(n.type)}`}>{n.tag}</span>
-                    {n.actions.map(a => (
-                      <button
-                        key={a.label}
-                        className={`notif-action-btn${a.primary ? " primary" : ""}`}
-                        onClick={e => e.stopPropagation()}
-                      >
-                        {a.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
-                <div className="notif-right">
-                  {n.unread && <div className="unread-dot" />}
-                  {n.unread && (
+                  <div className="notif-body">
+                    <div className="notif-top">
+                      <div className="notif-message">{n.message}</div>
+                      <div className="notif-time">{relTime(n.createdAt)}</div>
+                    </div>
+                    <div className="notif-actions">
+                      <span className={`notif-tag tag-${meta.color}`}>{meta.label}</span>
+                      {n.link && (
+                        <button
+                          className="notif-action-btn primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!n.isRead) markOneAsRead(n._id);
+                            navigate(n.link);
+                          }}
+                        >
+                          View →
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="notif-right">
+                    {!n.isRead && (
+                      <>
+                        <div className="unread-dot" />
+                        <div
+                          className="mark-read-ico"
+                          title="Mark as read"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markOneAsRead(n._id);
+                            showToast("Marked as read");
+                          }}
+                        >✓</div>
+                      </>
+                    )}
                     <div
-                      className="mark-read-ico"
-                      onClick={e => { e.stopPropagation(); markRead(n.id); }}
-                      title="Mark as read"
-                    >✓</div>
-                  )}
-                  <div
-                    className="delete-ico"
-                    onClick={e => { e.stopPropagation(); deleteNotif(n.id); }}
-                    title="Delete"
-                  >✕</div>
+                      className="delete-ico"
+                      title="Delete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteNotif(n._id);
+                      }}
+                    >✕</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
       <Toast toasts={toasts} />
+
+      <ConfirmModal
+        isOpen={!!modal}
+        title={modal?.title}
+        body={modal?.body}
+        onConfirm={modal?.onConfirm}
+        onCancel={() => setModal(null)}
+      />
     </div>
   );
 }

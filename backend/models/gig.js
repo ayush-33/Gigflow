@@ -40,6 +40,17 @@ const gigSchema = new mongoose.Schema({
     type: String,
     enum: ["open", "assigned"],
     default: "open"
+  },
+
+  // ✅ ADD THESE
+  rating: {
+    type: Number,
+    default: 0
+  },
+
+  reviewCount: {
+    type: Number,
+    default: 0
   }
 
 }, { timestamps: true });

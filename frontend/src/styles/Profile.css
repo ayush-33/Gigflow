@@ -743,3 +743,11 @@ tbody tr:hover { background: rgba(255,255,255,0.025); }
   td, th { padding: 11px 12px; }
   .page-header-title { font-size: 18px; }
 }
+
+.section-card-title span {
+  font-size: 18px;
+}
+
+.section-card-title span {
+  font-size: 18px;
+}

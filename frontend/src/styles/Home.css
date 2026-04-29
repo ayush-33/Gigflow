@@ -601,3 +601,53 @@
   .cta-buttons { flex-direction: column; }
   .cta-btn-primary, .cta-btn-secondary { width: 100%; }
 }
+
+/* ═══════════════════════════════════════════════════
+   Add these rules to Explore.css
+   (or paste into your existing additions.css)
+═══════════════════════════════════════════════════ */
+
+/* Hired badge overlaid on gig card image */
+.gig-hired-badge {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(239, 68, 68, 0.88);
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 100px;
+  backdrop-filter: blur(6px);
+  letter-spacing: 0.03em;
+  pointer-events: none;
+}
+
+/* Same for Home.css */
+.gig-hired-badge-home {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(239, 68, 68, 0.88);
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 100px;
+  pointer-events: none;
+}
+
+/* ── "Showing X–Y of Z gigs" line below pagination ── */
+.pagination-info {
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 12px;
+  font-weight: 500;
+}
+
+/* ── Page nav arrows slightly wider ── */
+.page-btn.page-nav {
+  font-size: 18px;
+  width: 42px;
+}

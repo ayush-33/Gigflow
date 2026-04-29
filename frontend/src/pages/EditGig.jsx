@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import api from "../api/api";
 import "../styles/GigForm.css";
 
 const CATEGORIES = [
@@ -32,7 +33,6 @@ function Toast({ message, type, onClose }) {
 export default function EditGig() {
   const { id }    = useParams();
   const navigate  = useNavigate();
-  const token     = localStorage.getItem("token");
 
   const [gig, setGig] = useState({
     title: "", description: "", price: "",
@@ -51,8 +51,7 @@ export default function EditGig() {
   useEffect(() => {
     (async () => {
       try {
-        const res  = await fetch(`http://localhost:5000/api/gigs/${id}`);
-        const data = await res.json();
+const { data } = await api.get(`/gigs/${id}`);
         setGig({
           title:        data.title        || "",
           description:  data.description  || "",
@@ -83,36 +82,32 @@ export default function EditGig() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const fd = new FormData();
-      fd.append("title",        gig.title);
-      fd.append("description",  gig.description);
-      fd.append("price",        gig.price);
-      fd.append("category",     gig.category);
-      fd.append("deliveryTime", gig.deliveryTime);
-      if (image) fd.append("image", image);
+  e.preventDefault();
+  setLoading(true);
 
-      const res = await fetch(`http://localhost:5000/api/gigs/${id}`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
+  try {
+    const fd = new FormData();
+    fd.append("title",        gig.title);
+    fd.append("description",  gig.description);
+    fd.append("price",        gig.price);
+    fd.append("category",     gig.category);
+    fd.append("deliveryTime", gig.deliveryTime);
 
-      if (res.ok) {
-        showToast("Gig updated successfully! ✨");
-        setTimeout(() => navigate("/profile"), 1400);
-      } else {
-        const data = await res.json();
-        showToast(data.message || "Update failed.", "error");
-      }
-    } catch {
-      showToast("Server error. Please try again.", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+    if (image) fd.append("image", image);
+
+    await api.put(`/gigs/${id}`, fd, {
+      headers: { "Content-Type": "multipart/form-data" }
+    });
+
+    showToast("Gig updated successfully! ✨");
+    setTimeout(() => navigate("/profile"), 1400);
+
+  } catch (err) {
+    showToast(err.response?.data?.message || "Update failed.", "error");
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (fetching) {
     return (
