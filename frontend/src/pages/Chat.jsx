@@ -81,6 +81,11 @@ function MessageBubble({ msg, isMine, onAccept, onReject, onCounter }) {
   if (msg.type === "offer") {
     return (
       <div className={`msg-row ${isMine ? "mine" : "theirs"}`}>
+        {!isMine && (
+          <div className="msg-sender-name">
+            {msg.senderId?.name || "User"}
+          </div>
+        )}
         <OfferBubble
           msg={msg}
           isMine={isMine}
@@ -95,6 +100,11 @@ function MessageBubble({ msg, isMine, onAccept, onReject, onCounter }) {
 
   return (
     <div className={`msg-row ${isMine ? "mine" : "theirs"}`}>
+      {!isMine && (
+        <div className="msg-sender-name">
+          {msg.senderId?.name || "User"}
+        </div>
+      )}
       <div className={`msg-bubble ${isMine ? "mine" : "theirs"}`}>
         {msg.message}
       </div>
@@ -186,13 +196,12 @@ export default function Chat() {
       .catch(() => {});
   }, []);
 
-  // ── Open room from URL ──
+// ── Open room from URL ──
 useEffect(() => {
   if (!urlRoomId || rooms.length === 0) return;
-
-  const room = rooms.find(r => (r._id || r.roomId) === urlRoomId);
+  // room._id from aggregation IS the roomId string
+  const room = rooms.find(r => r._id === urlRoomId);
   if (room) openRoomFromList(room);
-
 }, [urlRoomId, rooms]);
 
   /* ── If opened from GigDetails, auto-set active room ── */
@@ -274,11 +283,21 @@ socket.on("receiveMessage", (msg) => {
       setOtherTyping(false);
     });
 
+    socket.on('messagesSeen', ({ roomId, userId }) => {
+      if (userId !== user?._id?.toString()) return;
+      setRooms(prev => prev.map(r =>
+        (r._id || r.roomId) === roomId
+          ? { ...r, unreadCount: 0 }
+          : r
+      ));
+    });
+
     return () => {
       socket.off("receiveMessage");
       socket.off("offerUpdated");
       socket.off("userTyping");
       socket.off("userStopTyping");
+      socket.off("messagesSeen");
     };
 }, [socket, activeRoom?.roomId]);
 
@@ -390,21 +409,24 @@ socket.on("receiveMessage", (msg) => {
 
   /* ── Open chat from gig page ── */
   const openRoomFromList = (room) => {
-const senderId =
-  room.lastMessage?.senderId?._id ||
-  room.lastMessage?.senderId ||
-  null;
-const receiverId =
-  senderId === user?._id
-    ? room.lastMessage?.receiverId
-    : senderId || room.participants?.find(id => id !== user?._id);
+    // room._id here is the roomId string from the aggregation $group _id: "$roomId"
+    const roomId = room._id; // This IS the actual "gigId_userId1_userId2" string
+
+    // Determine who the "other" user is
+    const myId = user?._id?.toString();
+    const senderId = room.lastMessage?.senderId?.toString?.() 
+      || room.lastMessage?.senderId?.toString();
+    const receiverId = room.lastMessage?.receiverId?.toString?.() 
+      || room.lastMessage?.receiverId?.toString();
+    
+    const otherUserId = senderId === myId ? receiverId : senderId;
 
     setActiveRoom({
-      roomId:    room._id,
-      gigId:     room.gigId,
-      receiverId,
-      gigTitle:  room.gig?.title,
-      gigPrice:  room.gig?.price,
+      roomId,                     // ← correct: the actual room string
+      gigId: room.gigId?.toString() || room.gigId,
+      receiverId: otherUserId,
+      gigTitle: room.gig?.title,
+      gigPrice: room.gig?.price,
     });
   };
 useEffect(() => {
@@ -522,7 +544,7 @@ useEffect(() => {
                       <MessageBubble
                         key={msg._id}
                         msg={msg}
-isMine={(msg.senderId?._id || msg.senderId) === user?._id}
+                        isMine={(msg.senderId?._id || msg.senderId)?.toString() === user?._id?.toString()}
                         onAccept={handleAcceptOffer}
                         onReject={handleRejectOffer}
                         onCounter={handleCounter}

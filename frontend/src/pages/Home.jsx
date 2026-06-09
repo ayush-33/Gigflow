@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import api from "../api/api";
 import "../styles/Home.css";
 
@@ -18,12 +19,35 @@ function StarRating({ score = 0 }) {
 // ✅ FIX: same helper as Explore — handles both legacy /uploads/file and bare filename
 function buildImageUrl(image) {
   if (!image) return null;
-  if (image.startsWith("/uploads/")) return `http://localhost:5000${image}`;
+
+  // Already a full URL (http or https)
+  if (image.startsWith('http://') || image.startsWith('https://')) {
+    return image;
+  }
+
+  // Windows absolute path
+  if (image.includes('\\')) {
+    const filename = image.split('\\').pop();
+    return `http://localhost:5000/uploads/${filename}`;
+  }
+
+  // Unix absolute path
+  if (image.includes('/uploads/')) {
+    const filename = image.split('/uploads/').pop();
+    return `http://localhost:5000/uploads/${filename}`;
+  }
+
+  // Relative path starting with uploads/
+  if (image.startsWith('uploads/')) {
+    return `http://localhost:5000/${image}`;
+  }
+
+  // Plain filename only
   return `http://localhost:5000/uploads/${image}`;
 }
 
 /* ── Gig Card ── */
-function GigCard({ gig, onNavigate }) {
+function GigCard({ gig, onNavigate, saved, onToggleSave }) {
   const [imgError, setImgError] = useState(false);
 
   const guessIcon = () => {
@@ -67,6 +91,14 @@ function GigCard({ gig, onNavigate }) {
         {gig.category && (
           <span className="gig-category-tag">{gig.category}</span>
         )}
+
+        <button
+          className={`gig-wishlist-btn${saved ? " saved" : ""}`}
+          onClick={(e) => { e.stopPropagation(); onToggleSave(gig._id); }}
+          title={saved ? "Remove from saved" : "Save gig"}
+        >
+          {saved ? "❤️" : "🤍"}
+        </button>
 
         {isAssigned ? (
           <span className="gig-hired-badge-home">🔒 Hired</span>
@@ -116,6 +148,9 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   // ✅ Exactly 6 gigs on home page
   const [gigs, setGigs] = useState([]);
+  const [savedGigIds, setSavedGigIds] = useState(new Set());
+  const [saveToast, setSaveToast]     = useState(null);
+  const { user }                      = useAuth();
   const navigate = useNavigate();
 
   const handleSearch = (e) => {
@@ -136,6 +171,29 @@ export default function Home() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    api.get("/saved-gigs/ids")
+      .then(res => setSavedGigIds(new Set(res.data)))
+      .catch(() => {});
+  }, [user]);
+
+  const toggleSave = async (gigId) => {
+    if (!user) { navigate("/login"); return; }
+    try {
+      const { data } = await api.post("/saved-gigs/toggle", { gigId });
+      setSavedGigIds(prev => {
+        const next = new Set(prev);
+        data.saved ? next.add(gigId) : next.delete(gigId);
+        return next;
+      });
+      setSaveToast({ isSave: data.saved });
+      setTimeout(() => setSaveToast(null), 3000);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const categories = [
     { id: 1,  name: "Web Development",  icon: "💻" },
@@ -240,7 +298,7 @@ export default function Home() {
           ) : (
             <div className="gigs-grid">
               {gigs.map((gig) => (
-                <GigCard key={gig._id} gig={gig} onNavigate={navigate} />
+                <GigCard key={gig._id} gig={gig} onNavigate={navigate} saved={savedGigIds.has(gig._id)} onToggleSave={toggleSave} />
               ))}
             </div>
           )}
@@ -286,6 +344,24 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {saveToast && (
+        <div className={`save-toast ${saveToast.isSave ? "save-toast-saved" : "save-toast-removed"}`}>
+          {saveToast.isSave ? (
+            <>
+              ❤️ Gig saved!{" "}
+              <span
+                className="save-toast-link"
+                onClick={() => navigate("/profile", { state: { tab: "saved" } })}
+              >
+                View in My Gigs →
+              </span>
+            </>
+          ) : (
+            "Removed from saved"
+          )}
+        </div>
+      )}
 
     </div>
   );

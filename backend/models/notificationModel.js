@@ -10,12 +10,14 @@ const notificationSchema = new mongoose.Schema(
 
   message: {
     type: String,
-    required: true
   },
+  title:  { type: String },
+  body:   { type: String },
+  meta:   { type: mongoose.Schema.Types.Mixed },
 
   type: {
     type: String,
-    enum: ["bidAccepted", "bidRejected", "message"],
+    enum: ["bidAccepted", "bidRejected", "message", "bid_accepted", "bid_rejected", "payment_received", "offer"],
   },
 
   link: {
@@ -23,6 +25,10 @@ const notificationSchema = new mongoose.Schema(
   },
 
   isRead: {
+    type: Boolean,
+    default: false
+  },
+  read: {
     type: Boolean,
     default: false
   }

@@ -225,7 +225,7 @@ const reviewCount = gig.reviewCount || 0;
         state: {
           gig,
           bid: {
-            price: bidStatus?.acceptedPrice ?? gig.price
+            price: bidStatus?.acceptedBidPrice ?? gig.price
           }
         }
       })
@@ -247,21 +247,37 @@ const reviewCount = gig.reviewCount || 0;
                 </button>
               )}
 
-  {user && !isOwner && !isAssigned && (
+  {/* Hired freelancer can message the client */}
+{user && !isOwner && bidStatus?.bidStatus === "hired" && (
   <button
     className="btn-message"
-    onClick={() =>
-      navigate("/chat", {
-        state: {
-          gigId: gig._id,
-          receiverId: gig.ownerId?._id,
-          gigTitle: gig.title,
-          gigPrice: gig.price,
-        }
-      })
-    }
+    onClick={() => navigate("/chat", {
+      state: {
+        gigId: gig._id,
+        receiverId: gig.ownerId?._id || gig.ownerId,
+        gigTitle: gig.title,
+        gigPrice: gig.price,
+      }
+    })}
   >
-    💬 Message Seller
+    💬 Message Client
+  </button>
+)}
+
+{/* Gig owner can message the hired freelancer */}
+{user && isOwner && isAssigned && bidStatus?.acceptedBidderId && (
+  <button
+    className="btn-message"
+    onClick={() => navigate("/chat", {
+      state: {
+        gigId: gig._id,
+        receiverId: bidStatus.acceptedBidderId,
+        gigTitle: gig.title,
+        gigPrice: bidStatus.acceptedBidPrice ?? gig.price,
+      }
+    })}
+  >
+    💬 Message Hired Freelancer
   </button>
 )}
 

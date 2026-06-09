@@ -1,5 +1,6 @@
 import Message from "../models/message.js";
 import Gig from "../models/gig.js";
+import mongoose from "mongoose";
 
 /* ── Build roomId (deterministic, order-independent) ── */
 export const buildRoomId = (gigId, userA, userB) => {
@@ -11,13 +12,15 @@ export const buildRoomId = (gigId, userA, userB) => {
 // Returns list of distinct rooms the user participates in, with last message
 export const getMyChatRooms = async (req, res) => {
   try {
+    const userObjectId = new mongoose.Types.ObjectId(req.userId);
+
     // Find all distinct roomIds where user is sender or receiver
     const rooms = await Message.aggregate([
       {
         $match: {
           $or: [
-            { senderId:   { $eq: req.userId } },
-            { receiverId: { $eq: req.userId } },
+            { senderId:   userObjectId },
+            { receiverId: userObjectId },
           ],
         },
       },
@@ -64,7 +67,8 @@ export const getRoomMessages = async (req, res) => {
     }
 
     const messages = await Message.find({ roomId })
-      .populate("senderId", "name")
+      .populate("senderId", "name email")
+      .populate("receiverId", "name email")
       .sort({ createdAt: 1 });
 
     res.json(messages);

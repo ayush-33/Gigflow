@@ -61,9 +61,30 @@ function Stars({ score = 0 }) {
 // ✅ FIX: build image URL correctly — backend now stores only the filename
 function buildImageUrl(image) {
   if (!image) return null;
-  // Handle legacy paths that were stored as "/uploads/filename"
-  if (image.startsWith("/uploads/")) return `http://localhost:5000${image}`;
-  // New format: just the filename
+
+  // Already a full URL (http or https)
+  if (image.startsWith('http://') || image.startsWith('https://')) {
+    return image;
+  }
+
+  // Windows absolute path
+  if (image.includes('\\')) {
+    const filename = image.split('\\').pop();
+    return `http://localhost:5000/uploads/${filename}`;
+  }
+
+  // Unix absolute path
+  if (image.includes('/uploads/')) {
+    const filename = image.split('/uploads/').pop();
+    return `http://localhost:5000/uploads/${filename}`;
+  }
+
+  // Relative path starting with uploads/
+  if (image.startsWith('uploads/')) {
+    return `http://localhost:5000/${image}`;
+  }
+
+  // Plain filename only
   return `http://localhost:5000/uploads/${image}`;
 }
 
@@ -270,6 +291,7 @@ export default function Explore() {
   const [page,           setPage]           = useState(1);
   const { user } = useAuth();
 const [savedGigIds, setSavedGigIds] = useState(new Set());
+const [saveToast, setSaveToast] = useState(null); // { message, isSave }
 useEffect(() => {
   if (!user) return;
 
@@ -402,6 +424,10 @@ useEffect(() => {
       data.saved ? next.add(gigId) : next.delete(gigId);
       return next;
     });
+
+    // Show toast
+    setSaveToast({ isSave: data.saved });
+    setTimeout(() => setSaveToast(null), 3000);
 
   } catch (err) {
     console.error(err);
@@ -670,6 +696,24 @@ useEffect(() => {
               Show {filtered.length} Results
             </button>
           </div>
+        </div>
+      )}
+
+      {saveToast && (
+        <div className={`save-toast ${saveToast.isSave ? "save-toast-saved" : "save-toast-removed"}`}>
+          {saveToast.isSave ? (
+            <>
+              ❤️ Gig saved!{" "}
+              <span
+                className="save-toast-link"
+                onClick={() => navigate("/profile", { state: { tab: "saved" } })}
+              >
+                View in My Gigs →
+              </span>
+            </>
+          ) : (
+            "Removed from saved"
+          )}
         </div>
       )}
 

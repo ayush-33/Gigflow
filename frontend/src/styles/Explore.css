@@ -617,3 +617,30 @@
   border-radius: 100px;
   backdrop-filter: blur(6px);
 }
+
+.save-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a2e;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 9999;
+  animation: fadeInUp 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.save-toast-saved { border-left: 4px solid #e91e63; }
+.save-toast-removed { border-left: 4px solid #888; }
+.save-toast-link {
+  text-decoration: underline;
+  cursor: pointer;
+  color: #f48fb1;
+  margin-left: 4px;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}

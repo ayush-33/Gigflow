@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import api from "../api/api";
 import { useNavigate, useLocation } from "react-router-dom";
 import "../styles/Checkout.css";
 
@@ -11,12 +12,20 @@ const PAYMENT_METHODS = [
 export default function Checkout() {
   const navigate  = useNavigate();
   const { state } = useLocation();
-  const gig       = state?.gig;
-  const bid       = state?.bid;
+  
+  const [gig, setGig] = useState(() => state?.gig || JSON.parse(sessionStorage.getItem("checkout_gig")));
+  const [bid, setBid] = useState(() => state?.bid || JSON.parse(sessionStorage.getItem("checkout_bid")));
+
+  useEffect(() => {
+    if (state?.gig) sessionStorage.setItem("checkout_gig", JSON.stringify(state.gig));
+    if (state?.bid) sessionStorage.setItem("checkout_bid", JSON.stringify(state.bid));
+  }, [state]);
 
   const [method,    setMethod]    = useState("card");
   const [step,      setStep]      = useState(1); // 1 = details, 2 = confirmation
   const [loading,   setLoading]   = useState(false);
+  const [orderRef,  setOrderRef]  = useState("");
+  const [payError,  setPayError]  = useState("");
   const [card, setCard] = useState({
     number: "", name: "", expiry: "", cvv: ""
   });
@@ -30,14 +39,26 @@ export default function Checkout() {
   const platform = Math.round(total * 0.1);
   const subtotal = total - platform;
 
-  const handlePayment = (e) => {
+  const handlePayment = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate payment processing (2s)
-    setTimeout(() => {
-      setLoading(false);
+    setPayError("");
+    try {
+      const { data } = await api.post('/orders/complete', {
+        bidId:         bid._id,
+        gigId:         gig._id,
+        paymentMethod: method,
+        amount:        total,
+      });
+      setOrderRef(data.order.orderRef);
+      sessionStorage.removeItem("checkout_gig");
+      sessionStorage.removeItem("checkout_bid");
       setStep(2);
-    }, 2000);
+    } catch (err) {
+      setPayError(err.response?.data?.message || 'Payment failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatCard = (val) => {
@@ -58,7 +79,7 @@ export default function Checkout() {
             The freelancer has been notified and will begin work shortly.
           </p>
           <div className="success-order-ref">
-            Order ref: <strong>GF-{Date.now().toString().slice(-8)}</strong>
+            Order ref: <strong>{orderRef}</strong>
           </div>
           <div className="success-actions">
             <button className="btn-success-primary" onClick={() => navigate("/profile")}>
@@ -173,6 +194,7 @@ export default function Checkout() {
                 `Pay $${total} →`
               )}
             </button>
+            {payError && <div className="pay-error" style={{color: 'red', marginTop: '10px'}}>{payError}</div>}
 
             <p className="pay-disclaimer">
               By completing this purchase you agree to our Terms of Service.

@@ -89,54 +89,39 @@ export const acceptBid = async (req, res) => {
     const bid = await Bid.findById(req.params.bidId).populate("bidderId", "name");
     if (!bid) return res.status(404).json({ message: "Bid not found" });
 
-    const gig = await Gig.findById(bid.gigId).populate("ownerId", "name");
+    const gig = await Gig.findById(bid.gigId);
     if (!gig || !gig.ownerId)
       return res.status(400).json({ message: "Gig owner not found" });
 
-    if (gig.ownerId._id.toString() !== req.userId)
+    if (gig.ownerId.toString() !== req.userId)
       return res.status(403).json({ message: "Not authorized to accept this bid" });
 
-    if (gig.status === "assigned")
-      return res.status(400).json({ message: "A bid has already been accepted for this gig." });
-
-    bid.status = "hired";
-    await bid.save();
-
-    await Gig.findByIdAndUpdate(bid.gigId, { status: "assigned" });
-
-    // Reject all other pending bids
-    await Bid.updateMany(
-      { gigId: bid.gigId, _id: { $ne: bid._id }, status: "pending" },
-      { status: "rejected" }
-    );
-
-    // Notify accepted bidder
-await notifyUser({
-  userId: bid.bidderId._id,
-  message: `🎉 ${gig.ownerId.name} accepted your bid for "${gig.title}"`,
-  type: "bidAccepted",
-  link: `/gig/${bid.gigId}`
-});
-
-    // Notify rejected bidders
-    const rejectedBids = await Bid.find({
-      gigId: bid.gigId,
-      _id: { $ne: bid._id },
-      status: "rejected"
-    }).populate("bidderId", "name");
-
-    for (const rb of rejectedBids) {
-      if (rb.bidderId?._id) {
-        await notifyUser({
-  userId: rb.bidderId._id,
-  message: `Your bid on "${gig.title}" was not selected`,
-  type: "bidRejected",
-  link: `/gig/${bid.gigId}`
-});
-      }
+    // Guard against race condition: check if any other bid is already payment_pending or hired
+    const conflictingBid = await Bid.findOne({ 
+      gigId: gig._id, 
+      status: { $in: ['payment_pending', 'hired'] } 
+    });
+    
+    if (conflictingBid) {
+      return res.status(409).json({ message: "Another bid is already being processed or hired for this gig." });
     }
 
-    res.json({ message: "Bid accepted successfully" });
+    bid.status = "payment_pending";
+    await bid.save();
+
+    res.json({
+      success: true,
+      checkoutData: {
+        bidId:           bid._id,
+        gigId:           gig._id,
+        gigTitle:        gig.title,
+        gigImage:        gig.image,
+        gigPrice:        bid.price,
+        deliveryTime:    gig.deliveryTime,
+        freelancerName:  bid.bidderId?.name || 'Freelancer',
+        freelancerId:    bid.bidderId?._id,
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

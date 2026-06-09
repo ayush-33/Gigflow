@@ -22,7 +22,7 @@ const bidSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "hired", "rejected"],
+      enum: ["pending", "payment_pending", "hired", "rejected"],
       default: "pending"
     }
   },

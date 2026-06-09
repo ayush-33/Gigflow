@@ -14,6 +14,11 @@ import mongoose from "mongoose";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
 
 import authRoutes from "./routes/authRoutes.js";
 import gigRoutes from "./routes/gigRoutes.js";
@@ -24,6 +29,7 @@ import reviewRoutes from "./routes/reviewRoutes.js";
 import savedGigRoutes from "./routes/savedGigRoutes.js";
 import Message from "./models/message.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -65,6 +71,14 @@ io.on("connection", (socket) => {
     socket.join(roomId);
   });
 
+  socket.on("markSeen", async ({ roomId }) => {
+    if (!roomId || !socket.userId) return;
+    io.to(roomId).emit("messagesSeen", {
+      roomId,
+      userId: socket.userId,
+    });
+  });
+
   socket.on("leaveRoom", (roomId) => {
     if (!roomId) return;
     socket.leave(roomId);
@@ -97,17 +111,31 @@ io.on("connection", (socket) => {
         offerStatus: type === "offer" ? "pending" : null,
       });
 
-      const populated = await newMsg.populate("senderId", "name");
+      const populated = await newMsg.populate("senderId", "name email");
+      await populated.populate("receiverId", "name email");
 
       // ✅ send to chat room
       io.to(roomId).emit("receiveMessage", populated);
 
       // ✅ send notification to receiver
       if (receiverId) {
-        io.to(receiverId.toString()).emit("newNotification", {
-          type: "message",
-          message: "New message received",
-        });
+        try {
+          const senderName = populated.senderId?.name || "Someone";
+          const Notification = (await import("./models/notificationModel.js")).default;
+          const notif = await Notification.create({
+            userId: receiverId,
+            type: "message",
+            title: `New message from ${senderName}`,
+            body: type === "offer"
+              ? `Sent a price offer of $${price}`
+              : (message || "").slice(0, 80),
+            link: "/chat",
+            meta: { roomId, gigId },
+          });
+          io.to(receiverId.toString()).emit("newNotification", notif);
+        } catch (e) {
+          console.error("Notification error:", e.message);
+        }
       }
 
     } catch (err) {
@@ -170,7 +198,7 @@ io.on("connection", (socket) => {
 app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 /* ─────────────────────────
    🛣 ROUTES
@@ -183,6 +211,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/saved-gigs", savedGigRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/orders", orderRoutes);
 
 app.get("/", (req, res) => res.send("GigFlow Backend Running"));
 

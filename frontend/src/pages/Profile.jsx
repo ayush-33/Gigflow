@@ -8,31 +8,33 @@ import "../styles/Profile.css";
 /* ── Sidebar nav ── */
 const NAV = [
   { key: "dashboard", icon: "🏠", label: "Dashboard" },
-  { key: "gigs",      icon: "📦", label: "My Gigs" },
-  { key: "bids",      icon: "💬", label: "My Bids" },
-  { key: "offers",    icon: "📥", label: "Received Offers" },
-  { key: "saved",     icon: "❤️", label: "Saved Gigs" }, // ✅ ADD THIS
-  { key: "settings",  icon: "⚙️",  label: "Settings" },
+  { key: "gigs", icon: "📦", label: "My Gigs" },
+  { key: "bids", icon: "💬", label: "My Bids" },
+  { key: "offers", icon: "📥", label: "Received Offers" },
+  { key: "saved", icon: "❤️", label: "Saved Gigs" }, // ✅ ADD THIS
+  { key: "settings", icon: "⚙️", label: "Settings" },
 ];
 
 /* ── Status badge ── */
 function Badge({ status }) {
   const map = {
-    open:      "badge-open",
-    active:    "badge-active",
-    hired:     "badge-hired",
-    pending:   "badge-pending",
-    closed:    "badge-closed",
-    rejected:  "badge-rejected",
+    open: "badge-open",
+    active: "badge-active",
+    hired: "badge-hired",
+    pending: "badge-pending",
+    payment_pending: "badge-pending",
+    closed: "badge-closed",
+    rejected: "badge-rejected",
     withdrawn: "badge-withdrawn",
   };
   const label = {
-    open:      "Open",
-    active:    "Active / Hired",
-    hired:     "Hired",
-    pending:   "Pending",
-    closed:    "Closed",
-    rejected:  "Rejected",
+    open: "Open",
+    active: "Active / Hired",
+    hired: "Hired",
+    pending: "Pending",
+    payment_pending: "Awaiting Payment",
+    closed: "Closed",
+    rejected: "Rejected",
     withdrawn: "Withdrawn",
   };
   return (
@@ -120,7 +122,7 @@ function SavedGigsTab() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.get("/saved-gigs").then(r => setGigs(r.data)).catch(() => {});
+    api.get("/saved-gigs").then(r => setGigs(r.data)).catch(() => { });
   }, []);
 
   const removeSaved = async (gigId) => {
@@ -142,7 +144,7 @@ function SavedGigsTab() {
           <tbody>
             {gigs.map(gig => (
               <tr key={gig._id}>
-                <td className="td-title" style={{ cursor:"pointer", color:"var(--brand)" }}
+                <td className="td-title" style={{ cursor: "pointer", color: "var(--brand)" }}
                   onClick={() => navigate(`/gig/${gig._id}`)}>
                   {gig.title}
                 </td>
@@ -170,26 +172,26 @@ export default function Profile() {
   // ✅ FIX: context exports fetchNotifications, not refreshNotifications
   const { fetchNotifications } = useNotifications();
 
-  const [profile,        setProfile]        = useState(null);
-  const [gigs,           setGigs]           = useState([]);
-  const [bids,           setBids]           = useState([]);
-  const [receivedBids,   setReceivedBids]   = useState([]);
-  const [stats,          setStats]          = useState({});
-  const [activeTab,      setActiveTab]      = useState("dashboard");
-  const [toast,          setToast]          = useState(null);
-  const [modal,          setModal]          = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [gigs, setGigs] = useState([]);
+  const [bids, setBids] = useState([]);
+  const [receivedBids, setReceivedBids] = useState([]);
+  const [stats, setStats] = useState({});
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [toast, setToast] = useState(null);
+  const [modal, setModal] = useState(null);
   const [showComparison, setShowComparison] = useState(false);
 
   /* settings */
-  const [editName,    setEditName]    = useState("");
-  const [editBio,     setEditBio]     = useState("");
-  const [editPhone,   setEditPhone]   = useState("");
+  const [editName, setEditName] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [editPhone, setEditPhone] = useState("");
   const [settingsErr, setSettingsErr] = useState("");
 
   // ✅ REMOVED: const token = localStorage.getItem("token")
 
   const pendingOffers = receivedBids.filter((b) => b.status === "pending").length;
-  const pendingBids   = bids.filter((b) => b.status === "pending").length;
+  const pendingBids = bids.filter((b) => b.status === "pending").length;
 
   const showToast = (message, type = "success") => setToast({ message, type });
 
@@ -213,8 +215,8 @@ export default function Profile() {
       const s = sR.data;
 
       setProfile(p);
-      setEditName(p.name   || "");
-      setEditBio(p.bio     || "");
+      setEditName(p.name || "");
+      setEditBio(p.bio || "");
       setEditPhone(p.phone || "");
       setGigs(Array.isArray(g) ? g : []);
       setBids(Array.isArray(b) ? b : []);
@@ -228,6 +230,12 @@ export default function Profile() {
   useEffect(() => {
     fetchAll();
   }, [fetchAll, location.key]);
+
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab);
+    }
+  }, [location.state]);
 
   /* ── Generic action — uses api, no manual headers ── */
   const doAction = async (endpoint, method = "put", successMsg) => {
@@ -247,9 +255,31 @@ export default function Profile() {
     setModal({
       type: "confirm",
       title: "Accept this bid?",
-      body: "This will hire the freelancer and close your gig to other bidders.",
-      confirmLabel: "Accept Bid",
-      onConfirm: () => doAction(`/bids/accept/${id}`, "put", "Offer accepted! 🎉"),
+      body: "This will proceed to checkout to hire the freelancer.",
+      confirmLabel: "Checkout",
+      onConfirm: async () => {
+        try {
+          const { data } = await api.put(`/bids/accept/${id}`);
+          navigate('/checkout', {
+            state: {
+              gig: {
+                _id:          data.checkoutData.gigId,
+                title:        data.checkoutData.gigTitle,
+                image:        data.checkoutData.gigImage,
+                price:        data.checkoutData.gigPrice,
+                deliveryTime: data.checkoutData.deliveryTime,
+                ownerId:      { name: data.checkoutData.freelancerName },
+              },
+              bid: {
+                _id:   data.checkoutData.bidId,
+                price: data.checkoutData.gigPrice,
+              },
+            }
+          });
+        } catch (err) {
+          showToast(err.response?.data?.message || "Accept failed", "error");
+        }
+      },
     });
   };
 
@@ -293,8 +323,8 @@ export default function Profile() {
     try {
       // ✅ api.put — no manual Content-Type or Authorization needed
       await api.put("/profile/update", {
-        name:  editName,
-        bio:   editBio,
+        name: editName,
+        bio: editBio,
         phone: editPhone,
       });
       await fetchAll();
@@ -365,10 +395,14 @@ export default function Profile() {
             </div>
             <div className="page-header-sub">
               {activeTab === "dashboard" && `Welcome back, ${profile.name} 👋`}
-              {activeTab === "gigs"      && `${gigs.length} gig${gigs.length !== 1 ? "s" : ""} posted`}
-              {activeTab === "bids"      && `${bids.length} bid${bids.length !== 1 ? "s" : ""} placed`}
-              {activeTab === "offers"    && `${receivedBids.length} offer${receivedBids.length !== 1 ? "s" : ""} received`}
-              {activeTab === "settings"  && "Manage your account preferences"}
+              {activeTab === "gigs" && `${gigs.length} gig${gigs.length !== 1 ? "s" : ""} posted`}
+              {activeTab === "bids" && (
+                pendingBids > 0
+                  ? `${pendingBids} pending · ${bids.length} total`
+                  : `${bids.length} bid${bids.length !== 1 ? "s" : ""} placed`
+              )}
+              {activeTab === "offers" && `${receivedBids.length} offer${receivedBids.length !== 1 ? "s" : ""} received`}
+              {activeTab === "settings" && "Manage your account preferences"}
             </div>
           </div>
           <div className="header-profile">
@@ -623,6 +657,23 @@ export default function Profile() {
                                 <button className="btn-action btn-accept" onClick={() => handleAccept(bid._id)}>✓ Accept</button>
                                 <button className="btn-action btn-reject" onClick={() => handleReject(bid._id)}>✕ Reject</button>
                               </div>
+                            ) : bid.status === "payment_pending" ? (
+                              <div className="action-btns">
+                                <button className="btn-action btn-accept" onClick={() => navigate('/checkout', {
+                                  state: {
+                                    gig: {
+                                      _id: bid.gigId?._id,
+                                      title: bid.gigId?.title,
+                                      price: bid.price,
+                                      ownerId: { name: bid.bidderId?.name },
+                                    },
+                                    bid: {
+                                      _id: bid._id,
+                                      price: bid.price,
+                                    }
+                                  }
+                                })}>💳 Pay Now</button>
+                              </div>
                             ) : (
                               <Badge status={bid.status === "active" ? "hired" : bid.status} />
                             )}
@@ -636,7 +687,7 @@ export default function Profile() {
             </div>
           </>
         )}
-{activeTab === "saved" && <SavedGigsTab />}
+        {activeTab === "saved" && <SavedGigsTab />}
 
         {/* ── SETTINGS TAB ── */}
         {activeTab === "settings" && (
@@ -674,8 +725,8 @@ export default function Profile() {
                 <div className="field-value">
                   {profile.createdAt
                     ? new Date(profile.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric", month: "long", day: "numeric",
-                      })
+                      year: "numeric", month: "long", day: "numeric",
+                    })
                     : "—"}
                 </div>
               </div>
@@ -706,8 +757,8 @@ export default function Profile() {
                 <button
                   className="btn-cancel-settings"
                   onClick={() => {
-                    setEditName(profile.name  || "");
-                    setEditBio(profile.bio    || "");
+                    setEditName(profile.name || "");
+                    setEditBio(profile.bio || "");
                     setEditPhone(profile.phone || "");
                     setSettingsErr("");
                   }}

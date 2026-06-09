@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { getAccessToken } from "./utils/auth";
+import { getSocket } from "./utils/socket";
+import { useEffect } from "react";
 
 function PrivateRoute({ children }) {
   const { user, authReady } = useAuth();
@@ -35,6 +37,22 @@ import Chat from "./pages/Chat";
 
 
 function App() {
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    if (!user) return;
+    const socket = getSocket();
+    socket.emit("register", user._id);
+
+    socket.on("bidHired", (data) => {
+      alert(`🎉 ${data.message}`);
+    });
+
+    return () => {
+      socket.off("bidHired");
+    };
+  }, [user]);
+
   return (
     <BrowserRouter>
       <div className="App">

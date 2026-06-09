@@ -146,12 +146,20 @@ export const getGigBidStatus = async (req, res) => {
     const existingBid = await Bid.findOne({ gigId: req.params.id, bidderId: req.userId });
     const bidCount    = await Bid.countDocuments({ gigId: req.params.id });
 
+    // Find the hired bid
+    const acceptedBid = await Bid.findOne({ 
+      gigId: req.params.id, 
+      status: "hired" 
+    }).select("price bidderId");
+
     res.json({
       isOwner,
       isAssigned,
       alreadyBid: !!existingBid,
       bidStatus: existingBid ? existingBid.status : null,
-      bidCount
+      bidCount,
+      acceptedBidPrice: acceptedBid?.price ?? null,
+      acceptedBidderId: acceptedBid?.bidderId?.toString() ?? null,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
