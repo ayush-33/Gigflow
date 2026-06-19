@@ -58,7 +58,7 @@ export const getBidsOnMyGigs = async (req, res) => {
 
     const bids = await Bid.find({ gigId: { $in: gigIds } })
       .populate("bidderId", "name email")
-      .populate("gigId", "title price")
+      .populate("gigId", "title price deliveryTime image")
       .sort({ createdAt: -1 });
 
     res.json(bids);
@@ -71,9 +71,13 @@ export const getProfileStats = async (req, res) => {
   try {
     const gigsPosted = await Gig.countDocuments({ ownerId: req.userId });
     const bidsPlaced = await Bid.countDocuments({ bidderId: req.userId });
+    const pendingBids = await Bid.countDocuments({ bidderId: req.userId, status: "pending" });
+    const acceptedBids = await Bid.countDocuments({ bidderId: req.userId, status: { $in: ["payment_pending", "hired"] } });
+    const rejectedBids = await Bid.countDocuments({ bidderId: req.userId, status: "rejected" });
+    const withdrawnBids = await Bid.countDocuments({ bidderId: req.userId, status: "withdrawn" });
     const hiresWon   = await Bid.countDocuments({ bidderId: req.userId, status: "hired" });
 
-    res.json({ gigsPosted, bidsPlaced, hiresWon });
+    res.json({ gigsPosted, bidsPlaced, pendingBids, acceptedBids, rejectedBids, withdrawnBids, hiresWon });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

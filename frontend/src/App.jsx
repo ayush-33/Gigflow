@@ -5,11 +5,13 @@ import { useAuth } from "./context/AuthContext";
 import { getAccessToken } from "./utils/auth";
 import { getSocket } from "./utils/socket";
 import { useEffect } from "react";
+import { Toaster } from "react-hot-toast";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 function PrivateRoute({ children }) {
   const { user, authReady } = useAuth();
 
-  if (!authReady) return <div>Loading...</div>;
+  if (!authReady) return <div className="loading-screen"><div className="loading-spinner" /><p className="loading-text">Loading...</p></div>;
 
   const token = getAccessToken(); // 🔥 key fix
 
@@ -34,6 +36,7 @@ import EditGig from "./pages/EditGig";
 import Notifications from "./pages/Notification";
 import Checkout from "./pages/Checkout";
 import Chat from "./pages/Chat";
+import toast from "react-hot-toast";
 
 
 function App() {
@@ -42,65 +45,116 @@ function App() {
   useEffect(() => {
     if (!user) return;
     const socket = getSocket();
-    socket.emit("register", user._id);
+    if (socket) {
+      socket.emit("register", user._id);
 
-    socket.on("bidHired", (data) => {
-      alert(`🎉 ${data.message}`);
-    });
+      const handleBidHired = (data) => {
+        toast.success(`🎉 ${data.message}`);
+      };
 
-    return () => {
-      socket.off("bidHired");
-    };
+      socket.on("bidHired", handleBidHired);
+
+      return () => {
+        socket.off("bidHired", handleBidHired);
+      };
+    }
   }, [user]);
 
   return (
     <BrowserRouter>
       <div className="App">
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#1a1d27',
+              color: '#f1f5f9',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '12px',
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+            },
+          }}
+        />
 
         <Navbar />
 
-<Routes>
-  <Route path="/" element={<Home />} />
-  <Route path="/login" element={<Login />} />
-  <Route path="/signup" element={<Signup />} />
-  <Route path="/gig/:id" element={<GigDetails />} />
-  <Route path="/explore" element={<Explore />} />
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/gig/:id" element={<GigDetails />} />
+            <Route path="/explore" element={<Explore />} />
 
-  {/* 🔒 Protected Routes */}
-  <Route path="/profile" element={
-    <PrivateRoute><Profile /></PrivateRoute>
-  } />
+            {/* 🔒 Protected Routes */}
+            <Route path="/profile" element={
+              <PrivateRoute>
+                <ErrorBoundary>
+                  <Profile />
+                </ErrorBoundary>
+              </PrivateRoute>
+            } />
 
-  <Route path="/become-seller" element={
-    <PrivateRoute><BecomeSeller /></PrivateRoute>
-  } />
+            <Route path="/become-seller" element={
+              <PrivateRoute>
+                <ErrorBoundary>
+                  <BecomeSeller />
+                </ErrorBoundary>
+              </PrivateRoute>
+            } />
 
-  <Route path="/gigs/:id/bid" element={
-    <PrivateRoute><PlaceBid /></PrivateRoute>
-  } />
+            <Route path="/gigs/:id/bid" element={
+              <PrivateRoute>
+                <ErrorBoundary>
+                  <PlaceBid />
+                </ErrorBoundary>
+              </PrivateRoute>
+            } />
 
-  <Route path="/edit-gig/:id" element={
-    <PrivateRoute><EditGig /></PrivateRoute>
-  } />
+            <Route path="/edit-gig/:id" element={
+              <PrivateRoute>
+                <ErrorBoundary>
+                  <EditGig />
+                </ErrorBoundary>
+              </PrivateRoute>
+            } />
 
-  <Route path="/notifications" element={
-    <PrivateRoute><Notifications /></PrivateRoute>
-  } />
+            <Route path="/notifications" element={
+              <PrivateRoute>
+                <ErrorBoundary>
+                  <Notifications />
+                </ErrorBoundary>
+              </PrivateRoute>
+            } />
 
-  <Route path="/checkout" element={
-    <PrivateRoute><Checkout /></PrivateRoute>
-  } />
+            <Route path="/checkout" element={
+              <PrivateRoute>
+                <ErrorBoundary>
+                  <Checkout />
+                </ErrorBoundary>
+              </PrivateRoute>
+            } />
 
-  <Route path="/chat" element={
-  <PrivateRoute><Chat /></PrivateRoute>
-} />
+            <Route path="/chat" element={
+              <PrivateRoute>
+                <ErrorBoundary>
+                  <Chat />
+                </ErrorBoundary>
+              </PrivateRoute>
+            } />
 
-<Route path="/chat/:roomId" element={
-  <PrivateRoute><Chat /></PrivateRoute>
-} />
-</Routes>
+            <Route path="/chat/:roomId" element={
+              <PrivateRoute>
+                <ErrorBoundary>
+                  <Chat />
+                </ErrorBoundary>
+              </PrivateRoute>
+            } />
+          </Routes>
+        </ErrorBoundary>
+
         <Footer />
-
       </div>
     </BrowserRouter>
   )

@@ -44,11 +44,13 @@ export const createBid = async (req, res) => {
 
     if (gig.ownerId) {
       await notifyUser({
-  userId: gig.ownerId,
-  message: `${populatedBid.bidderId.name} placed a bid of $${price} on your gig`,
-  type: "message",
-  link: `/gig/${gig._id}`
-});
+        senderId: req.userId,
+        receiverId: gig.ownerId,
+        type: "NEW_BID",
+        title: "New Bid Received",
+        message: `You received a new bid from ${populatedBid.bidderId.name}.`,
+        link: `/profile`
+      });
     }
 
     res.status(201).json(populatedBid);
@@ -109,6 +111,15 @@ export const acceptBid = async (req, res) => {
     bid.status = "payment_pending";
     await bid.save();
 
+    await notifyUser({
+      senderId: req.userId,
+      receiverId: bid.bidderId._id,
+      type: "BID_ACCEPTED",
+      title: "Bid Accepted",
+      message: `Your bid on "${gig.title}" has been accepted.`,
+      link: "/profile"
+    });
+
     res.json({
       success: true,
       checkoutData: {
@@ -147,12 +158,14 @@ export const rejectBid = async (req, res) => {
     bid.status = "rejected";
     await bid.save();
 
-await notifyUser({
-  userId: bid.bidderId._id,
-  message: `Your bid on "${gig.title}" was not selected`,
-  type: "bidRejected",
-  link: `/gig/${gig._id}`
-});
+    await notifyUser({
+      senderId: req.userId,
+      receiverId: bid.bidderId._id,
+      type: "BID_REJECTED",
+      title: "Bid Rejected",
+      message: `Your bid on "${gig.title}" was rejected.`,
+      link: "/profile"
+    });
 
     res.json(bid);
   } catch (error) {
@@ -184,7 +197,8 @@ export const withdrawBid = async (req, res) => {
 });
     }
 
-    await bid.deleteOne();
+    bid.status = "withdrawn";
+    await bid.save();
     res.json({ message: "Bid withdrawn successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });

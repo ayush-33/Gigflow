@@ -1,6 +1,7 @@
 import Review from "../models/review.js";
 import Gig from "../models/gig.js";
 import Bid from "../models/bid.js";
+import { notifyUser } from "../utils/notifyUser.js";
 
 const recalcRating = async (gigId) => {
   const reviews = await Review.find({ gigId });
@@ -48,6 +49,15 @@ export const createReview = async (req, res) => {
       bidId: bid._id,
       rating: Number(rating),
       comment: comment.trim()
+    });
+
+    await notifyUser({
+      senderId: req.userId,
+      receiverId: bid.bidderId,
+      type: "PROJECT_COMPLETED",
+      title: "Project Completed",
+      message: `Project "${gig.title}" has been marked as completed.`,
+      link: "/profile"
     });
 
     await recalcRating(gigId);

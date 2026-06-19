@@ -2,13 +2,29 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/api";
 import { useNotifications } from "../context/NotificationContext";
+import toast from "react-hot-toast";
 import "../styles/Notifications.css";
 
 /* ── Type metadata ── */
 const TYPE_META = {
   bidAccepted: { icon: "🎉", label: "Hired",    color: "hired"   },
+  BID_ACCEPTED: { icon: "🎉", label: "Hired",    color: "hired"   },
+  bid_accepted: { icon: "🎉", label: "Hired",    color: "hired"   },
+  
   bidRejected: { icon: "😞", label: "Rejected",  color: "rejected" },
+  BID_REJECTED: { icon: "😞", label: "Rejected",  color: "rejected" },
+  bid_rejected: { icon: "😞", label: "Rejected",  color: "rejected" },
+  
   message:     { icon: "💬", label: "Message",   color: "message"  },
+  NEW_MESSAGE: { icon: "💬", label: "Message",   color: "message"  },
+  
+  NEW_BID:     { icon: "📥", label: "New Bid",   color: "system"   },
+  
+  PROJECT_AWARDED: { icon: "🏆", label: "Awarded", color: "hired" },
+  PROJECT_COMPLETED: { icon: "✅", label: "Completed", color: "hired" },
+  PAYMENT_RECEIVED: { icon: "💰", label: "Paid", color: "system" },
+  CONTRACT_STARTED: { icon: "🚀", label: "Started", color: "system" },
+  
   default:     { icon: "🔔", label: "Update",    color: "system"   },
 };
 
@@ -36,19 +52,7 @@ function relTime(dateStr) {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-/* ── Toast ── */
-function Toast({ toasts }) {
-  return (
-    <div className="toast-area">
-      {toasts.map((t) => (
-        <div key={t.id} className={`notif-toast ${t.type}`}>
-          <span style={{ fontSize: 15 }}>{t.type === "success" ? "✅" : "ℹ️"}</span>
-          {t.message}
-        </div>
-      ))}
-    </div>
-  );
-}
+
 
 /* ── Confirm Modal ── */
 function ConfirmModal({ isOpen, title, body, onConfirm, onCancel }) {
@@ -75,14 +79,15 @@ const { notifications, markOneAsRead, markAllRead, fetchNotifications } = useNot
   const [filter,   setFilter]   = useState("all");
   const [search,   setSearch]   = useState("");
   const [removing, setRemoving] = useState(new Set());
-  const [toasts,   setToasts]   = useState([]);
   const [modal,    setModal]    = useState(null);
 
 
   const showToast = useCallback((message, type = "success") => {
-    const id = Date.now();
-    setToasts((p) => [...p, { id, message, type }]);
-    setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 2800);
+    if (type === "success") {
+      toast.success(message);
+    } else {
+      toast.error(message);
+    }
   }, []);
 
   /* ── Delete a single notification (DB) ── */
@@ -132,17 +137,27 @@ const { notifications, markOneAsRead, markAllRead, fetchNotifications } = useNot
   /* ── Filtered list ── */
   const filtered = notifications.filter((n) => {
     if (filter === "unread" && n.isRead) return false;
-    if (filter !== "all" && filter !== "unread" && n.type !== filter) return false;
-    if (search && !n.message.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filter === "bidAccepted") {
+      if (!["bidAccepted", "BID_ACCEPTED", "bid_accepted", "PROJECT_AWARDED", "PROJECT_COMPLETED"].includes(n.type)) return false;
+    } else if (filter === "bidRejected") {
+      if (!["bidRejected", "BID_REJECTED", "bid_rejected"].includes(n.type)) return false;
+    } else if (filter === "message") {
+      if (!["message", "NEW_MESSAGE"].includes(n.type)) return false;
+    } else if (filter !== "all") {
+      if (n.type !== filter) return false;
+    }
+    
+    const textMsg = n.message || n.body || "";
+    if (search && !textMsg.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
   const counts = {
     all:         notifications.length,
     unread:      notifications.filter((n) => !n.isRead).length,
-    bidAccepted: notifications.filter((n) => n.type === "bidAccepted").length,
-    bidRejected: notifications.filter((n) => n.type === "bidRejected").length,
-    message:     notifications.filter((n) => n.type === "message").length,
+    bidAccepted: notifications.filter((n) => ["bidAccepted", "BID_ACCEPTED", "bid_accepted", "PROJECT_AWARDED", "PROJECT_COMPLETED"].includes(n.type)).length,
+    bidRejected: notifications.filter((n) => ["bidRejected", "BID_REJECTED", "bid_rejected"].includes(n.type)).length,
+    message:     notifications.filter((n) => ["message", "NEW_MESSAGE"].includes(n.type)).length,
   };
 
   return (
@@ -318,7 +333,7 @@ const { notifications, markOneAsRead, markAllRead, fetchNotifications } = useNot
         )}
       </div>
 
-      <Toast toasts={toasts} />
+
 
       <ConfirmModal
         isOpen={!!modal}

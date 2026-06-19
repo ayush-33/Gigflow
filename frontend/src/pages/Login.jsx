@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/api";
+import toast from "react-hot-toast";
 import "../styles/Auth.css";
 
 export default function Login() {
@@ -39,10 +40,13 @@ export default function Login() {
 
       // ✅ Backend sends accessToken (not token)
       login(data.accessToken, data.user);
+      toast.success("Login Successful! 👋");
 
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed. Please try again.");
+      const errMsg = err.response?.data?.message || "Login failed. Please try again.";
+      setError(errMsg);
+      toast.error(errMsg);
     } finally {
       setLoading(false);
     }

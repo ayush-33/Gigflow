@@ -2,28 +2,58 @@ import mongoose from "mongoose";
 
 const notificationSchema = new mongoose.Schema(
 {
+  senderId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  },
+  receiverId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
+  },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true
   },
-
-  message: {
-    type: String,
-  },
-  title:  { type: String },
-  body:   { type: String },
-  meta:   { type: mongoose.Schema.Types.Mixed },
-
   type: {
     type: String,
-    enum: ["bidAccepted", "bidRejected", "message", "bid_accepted", "bid_rejected", "payment_received", "offer"],
+    enum: [
+      "BID_SUBMITTED",
+      "BID_ACCEPTED",
+      "BID_REJECTED",
+      "NEW_BID",
+      "NEW_MESSAGE",
+      "PROJECT_AWARDED",
+      "PROJECT_COMPLETED",
+      "PAYMENT_RECEIVED",
+      "CONTRACT_STARTED",
+      "GIG_DELETED",
+      "message",
+      "offer",
+      "bid_accepted",
+      "bid_rejected",
+      "payment_received",
+      "bidAccepted",
+      "bidRejected"
+    ],
+    required: true
   },
-
-  link: {
+  title: {
+    type: String,
+    required: true
+  },
+  message: {
+    type: String,
+    required: true
+  },
+  body: {
     type: String
   },
-
+  link: {
+    type: String,
+    default: "/"
+  },
   isRead: {
     type: Boolean,
     default: false
@@ -31,8 +61,18 @@ const notificationSchema = new mongoose.Schema(
   read: {
     type: Boolean,
     default: false
+  },
+  meta: {
+    type: mongoose.Schema.Types.Mixed
   }
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
 
-}, { timestamps: true });
+notificationSchema.virtual("notificationId").get(function() {
+  return this._id.toHexString();
+});
 
 export default mongoose.model("Notification", notificationSchema);

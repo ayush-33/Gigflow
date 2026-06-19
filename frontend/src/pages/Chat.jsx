@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getSocket } from "../utils/socket";
 import api from "../api/api";
+import toast from "react-hot-toast";
 import "../styles/Chat.css";
 
 /* ── helpers ── */
@@ -68,6 +69,16 @@ function OfferBubble({ msg, isMine, onAccept, onReject, onCounter }) {
   );
 }
 
+function MessageStatus({ status }) {
+  if (status === "read") {
+    return <span style={{ color: "#3b82f6", marginLeft: "5px", fontWeight: "bold" }}>✓✓</span>;
+  }
+  if (status === "delivered") {
+    return <span style={{ color: "#94a3b8", marginLeft: "5px" }}>✓✓</span>;
+  }
+  return <span style={{ color: "#94a3b8", marginLeft: "5px" }}>✓</span>;
+}
+
 /* ── Message bubble ── */
 function MessageBubble({ msg, isMine, onAccept, onReject, onCounter }) {
   if (msg.type === "system") {
@@ -93,7 +104,10 @@ function MessageBubble({ msg, isMine, onAccept, onReject, onCounter }) {
           onReject={onReject}
           onCounter={onCounter}
         />
-        <span className="msg-time">{formatTime(msg.createdAt)}</span>
+        <span className="msg-time">
+          {formatTime(msg.createdAt)}
+          {isMine && <MessageStatus status={msg.status} />}
+        </span>
       </div>
     );
   }
@@ -108,7 +122,10 @@ function MessageBubble({ msg, isMine, onAccept, onReject, onCounter }) {
       <div className={`msg-bubble ${isMine ? "mine" : "theirs"}`}>
         {msg.message}
       </div>
-      <span className="msg-time">{formatTime(msg.createdAt)}</span>
+      <span className="msg-time">
+        {formatTime(msg.createdAt)}
+        {isMine && <MessageStatus status={msg.status} />}
+      </span>
     </div>
   );
 }
@@ -169,16 +186,18 @@ export default function Chat() {
   const [offerPrice,   setOfferPrice]   = useState("");
   const [offerNote,    setOfferNote]    = useState("");
   const [typing,       setTyping]       = useState(false);
-  const [otherTyping,  setOtherTyping]  = useState(false);
-  const [toast,        setToast]        = useState(null);
+  const [typingUser,   setTypingUser]   = useState("");
 
   const messagesEndRef = useRef(null);
   const typingTimer    = useRef(null);
   const socket         = getSocket();
 
   const showToast = (msg, type = "success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 2500);
+    if (type === "success") {
+      toast.success(msg);
+    } else {
+      toast.error(msg);
+    }
   };
 
   /* ── Scroll to bottom ── */
@@ -276,15 +295,22 @@ socket.on("receiveMessage", (msg) => {
     });
 
     socket.on("userTyping", ({ userName }) => {
-      setOtherTyping(true);
+      setTypingUser(userName || "Someone");
     });
 
     socket.on("userStopTyping", () => {
-      setOtherTyping(false);
+      setTypingUser("");
     });
 
     socket.on('messagesSeen', ({ roomId, userId }) => {
-      if (userId !== user?._id?.toString()) return;
+      if (roomId === activeRoom?.roomId && userId !== user?._id?.toString()) {
+        setMessages(prev => prev.map(m => 
+          (m.senderId?._id || m.senderId)?.toString() === user?._id?.toString()
+            ? { ...m, status: "read" }
+            : m
+        ));
+      }
+
       setRooms(prev => prev.map(r =>
         (r._id || r.roomId) === roomId
           ? { ...r, unreadCount: 0 }
@@ -555,9 +581,14 @@ useEffect(() => {
               )}
 
               {/* Typing indicator */}
-              {otherTyping && (
-                <div className="typing-indicator">
-                  <span /><span /><span />
+              {typingUser && (
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", margin: "4px 0" }}>
+                  <div className="typing-indicator" style={{ margin: 0 }}>
+                    <span /><span /><span />
+                  </div>
+                  <span style={{ fontSize: "12px", color: "var(--text-muted, #6b7280)", fontStyle: "italic" }}>
+                    {typingUser} is typing...
+                  </span>
                 </div>
               )}
 
@@ -586,12 +617,7 @@ useEffect(() => {
         )}
       </main>
 
-      {/* Toast */}
-      {toast && (
-        <div className={`chat-toast ${toast.type}`}>
-          {toast.type === "success" ? "✅" : "❌"} {toast.msg}
-        </div>
-      )}
+
     </div>
   );
 }

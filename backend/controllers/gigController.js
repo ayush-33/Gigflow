@@ -1,5 +1,7 @@
 import Gig from "../models/gig.js";
 import Bid from "../models/bid.js";
+import { notifyUser } from "../utils/notifyUser.js";
+import { io } from "../server.js";
 
 /* ── Helper: sanitise image path ── */
 // Ensures we ONLY store the filename (e.g. "abc123.jpg") in the DB.
@@ -91,6 +93,34 @@ export const deleteGig = async (req, res) => {
 
     if (gig.ownerId.toString() !== req.userId)
       return res.status(403).json({ message: "Not authorized to delete this gig" });
+
+    // Fetch all bids on this gig before deletion to notify bidders
+    const bids = await Bid.find({ gigId: gig._id });
+
+    // Send notification and emit socket event for each bidder
+    for (const bid of bids) {
+      try {
+        await notifyUser({
+          senderId: req.userId,
+          receiverId: bid.bidderId,
+          type: "GIG_DELETED",
+          title: "Gig Deleted",
+          message: `The gig "${gig.title}" you bid on has been deleted.`,
+          link: "/profile"
+        });
+
+        if (io) {
+          io.to(bid.bidderId.toString()).emit("gigDeleted", { gigId: gig._id });
+        }
+      } catch (err) {
+        console.error(`Error notifying bidder ${bid.bidderId}:`, err.message);
+      }
+    }
+
+    // Also emit gigDeleted event to the owner's socket room (triggers real-time stats update if they are on another tab/device)
+    if (io) {
+      io.to(req.userId.toString()).emit("gigDeleted", { gigId: gig._id });
+    }
 
     // Also remove all bids for this gig
     await Bid.deleteMany({ gigId: gig._id });

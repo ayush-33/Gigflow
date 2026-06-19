@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../api/api";
+import toast from "react-hot-toast";
 import "../styles/Auth.css";
 
 function getPasswordStrength(pw) {
@@ -42,12 +43,16 @@ export default function Signup() {
   setError("");
 
   if (formData.password !== formData.confirmPassword) {
-    setError("Passwords do not match.");
+    const errText = "Passwords do not match.";
+    setError(errText);
+    toast.error(errText);
     return;
   }
 
   if (formData.password.length < 6) {
-    setError("Password must be at least 6 characters.");
+    const errText = "Password must be at least 6 characters.";
+    setError(errText);
+    toast.error(errText);
     return;
   }
 
@@ -60,12 +65,13 @@ export default function Signup() {
       password: formData.password,
     });
 
+    toast.success("Account Created Successfully! Please sign in.");
     navigate("/login");
 
   } catch (err) {
-    setError(
-      err.response?.data?.message || "Signup failed. Please try again."
-    );
+    const errMsg = err.response?.data?.message || "Signup failed. Please try again.";
+    setError(errMsg);
+    toast.error(errMsg);
   } finally {
     setLoading(false);
   }

@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useNotifications } from "../context/NotificationContext";
+import { useAuth } from "../context/AuthContext";
 import ConfirmModal from "../components/ConfirmModal";
 import api from "../api/api";          // ✅ NEW
+import toast from "react-hot-toast";
 import "../styles/Profile.css";
 
 /* ── Sidebar nav ── */
@@ -44,19 +46,7 @@ function Badge({ status }) {
   );
 }
 
-/* ── Toast ── */
-function Toast({ message, type = "success", onClose }) {
-  useEffect(() => {
-    const t = setTimeout(onClose, 3000);
-    return () => clearTimeout(t);
-  }, [onClose]);
-  return (
-    <div className={`toast toast-${type}`}>
-      <span className="toast-icon">{type === "success" ? "✅" : "❌"}</span>
-      {message}
-    </div>
-  );
-}
+
 
 /* ── Empty state ── */
 function EmptyState({ icon, title, sub }) {
@@ -171,6 +161,7 @@ export default function Profile() {
 
   // ✅ FIX: context exports fetchNotifications, not refreshNotifications
   const { fetchNotifications } = useNotifications();
+  const { socket } = useAuth();
 
   const [profile, setProfile] = useState(null);
   const [gigs, setGigs] = useState([]);
@@ -178,7 +169,6 @@ export default function Profile() {
   const [receivedBids, setReceivedBids] = useState([]);
   const [stats, setStats] = useState({});
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [toast, setToast] = useState(null);
   const [modal, setModal] = useState(null);
   const [showComparison, setShowComparison] = useState(false);
 
@@ -193,7 +183,13 @@ export default function Profile() {
   const pendingOffers = receivedBids.filter((b) => b.status === "pending").length;
   const pendingBids = bids.filter((b) => b.status === "pending").length;
 
-  const showToast = (message, type = "success") => setToast({ message, type });
+  const showToast = (message, type = "success") => {
+    if (type === "success") {
+      toast.success(message);
+    } else {
+      toast.error(message);
+    }
+  };
 
   /* ── fetchAll — uses api instance, no manual headers ── */
   const fetchAll = useCallback(async () => {
@@ -230,6 +226,29 @@ export default function Profile() {
   useEffect(() => {
     fetchAll();
   }, [fetchAll, location.key]);
+
+  // ✅ Refresh dashboard statistics automatically in real time when socket notifications/messages arrive
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUpdate = () => {
+      fetchAll();
+    };
+
+    socket.on("notification", handleUpdate);
+    socket.on("newNotification", handleUpdate);
+    socket.on("bidHired", handleUpdate);
+    socket.on("newMessage", handleUpdate);
+    socket.on("gigDeleted", handleUpdate);
+
+    return () => {
+      socket.off("notification", handleUpdate);
+      socket.off("newNotification", handleUpdate);
+      socket.off("bidHired", handleUpdate);
+      socket.off("newMessage", handleUpdate);
+      socket.off("gigDeleted", handleUpdate);
+    };
+  }, [fetchAll, socket]);
 
   useEffect(() => {
     if (location.state?.tab) {
@@ -426,17 +445,10 @@ export default function Profile() {
                 </div>
               </div>
               <div className="stat-card">
-                <div className="stat-icon-box amber">💬</div>
+                <div className="stat-icon-box blue">💬</div>
                 <div className="stat-body">
                   <div className="stat-number">{stats.bidsPlaced ?? bids.length}</div>
-                  <div className="stat-label">Bids Placed</div>
-                </div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-icon-box green">🎉</div>
-                <div className="stat-body">
-                  <div className="stat-number">{stats.hiresWon || 0}</div>
-                  <div className="stat-label">Times Hired</div>
+                  <div className="stat-label">My Bids</div>
                 </div>
               </div>
               <div className="stat-card">
@@ -444,6 +456,52 @@ export default function Profile() {
                 <div className="stat-body">
                   <div className="stat-number">{receivedBids.length}</div>
                   <div className="stat-label">Offers Received</div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ 
+              marginTop: "1.5rem", 
+              marginBottom: "0.75rem", 
+              fontSize: "12.5px", 
+              fontWeight: "700", 
+              color: "var(--text-secondary)", 
+              textTransform: "uppercase", 
+              letterSpacing: "0.06em",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}>
+              <span>📊</span> Bid Status Breakdown
+            </div>
+
+            <div className="stats-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+              <div className="stat-card">
+                <div className="stat-icon-box amber">⏳</div>
+                <div className="stat-body">
+                  <div className="stat-number">{stats.pendingBids ?? 0}</div>
+                  <div className="stat-label">Pending Bids</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon-box green">✅</div>
+                <div className="stat-body">
+                  <div className="stat-number">{stats.acceptedBids ?? 0}</div>
+                  <div className="stat-label">Accepted Bids</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon-box red">❌</div>
+                <div className="stat-body">
+                  <div className="stat-number">{stats.rejectedBids ?? 0}</div>
+                  <div className="stat-label">Rejected Bids</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon-box gray" style={{ backgroundColor: "rgba(148,163,184,0.12)" }}>↩</div>
+                <div className="stat-body">
+                  <div className="stat-number">{stats.withdrawnBids ?? 0}</div>
+                  <div className="stat-label">Withdrawn Bids</div>
                 </div>
               </div>
             </div>
@@ -665,6 +723,8 @@ export default function Profile() {
                                       _id: bid.gigId?._id,
                                       title: bid.gigId?.title,
                                       price: bid.price,
+                                      deliveryTime: bid.gigId?.deliveryTime,
+                                      image: bid.gigId?.image,
                                       ownerId: { name: bid.bidderId?.name },
                                     },
                                     bid: {
@@ -798,9 +858,7 @@ export default function Profile() {
 
       </main>
 
-      {toast && (
-        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
-      )}
+
 
       <ConfirmModal modal={modal} onClose={() => setModal(null)} />
     </div>

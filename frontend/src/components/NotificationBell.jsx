@@ -1,43 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api/api";
-import { getSocket } from "../utils/socket";
+import { useNotifications } from "../context/NotificationContext";
 import "../styles/Notifications.css";
 
 export default function NotificationBell() {
-  const [notifs, setNotifs]     = useState([]);
-  const [unread, setUnread]     = useState(0);
+  const { notifications, markAllRead } = useNotifications();
   const [isOpen, setIsOpen]     = useState(false);
   const dropdownRef = useRef(null);
   const navigate    = useNavigate();
 
-  useEffect(() => {
-    fetchNotifs();
-
-    const socket = getSocket();
-    socket.on("newNotification", (notif) => {
-      setNotifs(prev => [notif, ...prev].slice(0, 10));
-      setUnread(prev => prev + 1);
-    });
-
-    return () => socket.off("newNotification");
-  }, []);
-
-  const fetchNotifs = async () => {
-    try {
-      const { data } = await api.get("/notifications");
-      setNotifs(data.slice(0, 10));
-      setUnread(data.filter(n => !n.read && !n.isRead).length);
-    } catch (e) { console.error(e); }
-  };
-
-  const markAllRead = async () => {
-    try {
-      await api.put("/notifications/mark-all-read");
-      setNotifs(prev => prev.map(n => ({ ...n, read: true, isRead: true })));
-      setUnread(0);
-    } catch (e) { console.error(e); }
-  };
+  const unread = notifications.filter(n => !n.read && !n.isRead).length;
+  const notifs = notifications.slice(0, 10);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -52,14 +25,17 @@ export default function NotificationBell() {
   return (
     <div className="notification-bell-container" ref={dropdownRef}>
       <button className="bell-btn" onClick={() => setIsOpen(!isOpen)}>
-        🔔 {unread > 0 && <span className="bell-badge">{unread}</span>}
+        <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" className="bell-icon"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+        <span className="bell-label-mobile">Notifications</span>
+        {unread > 0 && <span className="bell-badge">{unread}</span>}
+        <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" className="bell-chevron-mobile"><path d="M9 18l6-6-6-6"></path></svg>
       </button>
 
       {isOpen && (
         <div className="notif-dropdown">
           <div className="notif-header">
             <h3>Notifications</h3>
-            <button onClick={markAllRead}>Mark all read</button>
+            {unread > 0 && <button onClick={markAllRead}>Mark all read</button>}
           </div>
           <div className="notif-list">
             {notifs.length === 0 ? (

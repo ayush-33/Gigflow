@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/api";
+import toast from "react-hot-toast";
 import "../styles/GigForm.css";
 
 const CATEGORIES = [
@@ -17,18 +18,7 @@ const CATEGORIES = [
   { value: "ai-ml",                label: "🤖 AI & Machine Learning"    },
 ];
 
-function Toast({ message, type, onClose }) {
-  useEffect(() => {
-    const t = setTimeout(onClose, 3200);
-    return () => clearTimeout(t);
-  }, [onClose]);
-  return (
-    <div className={`form-toast ${type}`}>
-      <span className="toast-emoji">{type === "success" ? "✅" : "❌"}</span>
-      {message}
-    </div>
-  );
-}
+
 
 export default function EditGig() {
   const { id }    = useParams();
@@ -42,10 +32,15 @@ export default function EditGig() {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetching,setFetching]= useState(true);
-  const [toast,   setToast]   = useState(null);
   const [changed, setChanged] = useState(false);
 
-  const showToast = (message, type = "success") => setToast({ message, type });
+  const showToast = (message, type = "success") => {
+    if (type === "success") {
+      toast.success(message);
+    } else {
+      toast.error(message);
+    }
+  };
 
   /* ── Fetch existing gig ── */
   useEffect(() => {
@@ -285,13 +280,7 @@ const { data } = await api.get(`/gigs/${id}`);
         </div>
       </div>
 
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/api";
+import toast from "react-hot-toast";
 import "../styles/GigForm.css";
 
 const CATEGORIES = [
@@ -19,19 +20,7 @@ const CATEGORIES = [
 
 const STEPS = ["Basics", "Details", "Media"];
 
-/* Toast with auto-dismiss */
-function Toast({ message, type, onClose }) {
-  useEffect(() => {
-    const t = setTimeout(onClose, 3200);
-    return () => clearTimeout(t);
-  }, [onClose]);
-  return (
-    <div className={`form-toast ${type}`}>
-      <span className="toast-emoji">{type === "success" ? "✅" : "❌"}</span>
-      {message}
-    </div>
-  );
-}
+
 
 /* Per-field validation */
 const validate = (step, form) => {
@@ -62,7 +51,6 @@ export default function BecomeSeller() {
 
   const [step,    setStep]    = useState(0);
   const [loading, setLoading] = useState(false);
-  const [toast,   setToast]   = useState(null);
   const [errors,  setErrors]  = useState({});
 
   const [form, setForm] = useState({
@@ -70,7 +58,13 @@ export default function BecomeSeller() {
     price: "", deliveryTime: "", image: null,
   });
 
-  const showToast = (message, type = "success") => setToast({ message, type });
+  const showToast = (message, type = "success") => {
+    if (type === "success") {
+      toast.success(message);
+    } else {
+      toast.error(message);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, type: t, files } = e.target;
@@ -359,9 +353,7 @@ export default function BecomeSeller() {
         </div>
       </div>
 
-      {toast && (
-        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
-      )}
+
     </div>
   );
 }

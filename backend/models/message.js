@@ -10,6 +10,7 @@ const messageSchema = new mongoose.Schema(
     message:    { type: String, required: true, trim: true },
     price:      { type: Number, default: null },           // only for type="offer"
     offerStatus:{ type: String, enum: ["pending", "accepted", "rejected", "countered"], default: null },
+    status:     { type: String, enum: ["sent", "delivered", "read"], default: "sent" },
   },
   { timestamps: true }
 );

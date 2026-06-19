@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import api from "../api/api";
 import { useNavigate, useLocation } from "react-router-dom";
+import toast from "react-hot-toast";
 import "../styles/Checkout.css";
 
 const PAYMENT_METHODS = [
@@ -30,8 +31,14 @@ export default function Checkout() {
     number: "", name: "", expiry: "", cvv: ""
   });
 
-  if (!gig) {
-    navigate("/explore");
+  useEffect(() => {
+    if (!gig || !bid) {
+      toast.error("Invalid checkout session. Redirecting to explore...");
+      navigate("/explore");
+    }
+  }, [gig, bid, navigate]);
+
+  if (!gig || !bid) {
     return null;
   }
 
@@ -53,9 +60,12 @@ export default function Checkout() {
       setOrderRef(data.order.orderRef);
       sessionStorage.removeItem("checkout_gig");
       sessionStorage.removeItem("checkout_bid");
+      toast.success("Payment Completed Successfully! 🎉");
       setStep(2);
     } catch (err) {
-      setPayError(err.response?.data?.message || 'Payment failed. Please try again.');
+      const errMsg = err.response?.data?.message || 'Payment failed. Please try again.';
+      setPayError(errMsg);
+      toast.error(errMsg);
     } finally {
       setLoading(false);
     }

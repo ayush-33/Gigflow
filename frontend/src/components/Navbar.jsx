@@ -1,44 +1,75 @@
-import { useState, useEffect, useRef } from "react";
-  import { useNavigate, useLocation } from "react-router-dom";
-  import { useAuth } from "../context/AuthContext";
-  import NotificationBell from "./NotificationBell";
-  import "../styles/Navbar.css";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import NotificationBell from "./NotificationBell";
+import { useNotifications } from "../context/NotificationContext";
+import toast from "react-hot-toast";
+import { 
+  FiHome, 
+  FiCompass, 
+  FiMessageSquare, 
+  FiAward, 
+  FiLogIn, 
+  FiUserPlus, 
+  FiLogOut, 
+  FiChevronRight 
+} from "react-icons/fi";
+import "../styles/Navbar.css";
 
-  export default function Navbar() {
-    const [isMenuOpen,        setIsMenuOpen]        = useState(false);
-    const [scrolled,          setScrolled]          = useState(false);
 
-    // ✅ user from context — updates reactively on login/logout
-    const { user, logout } = useAuth();
+export default function Navbar() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-    const navigate = useNavigate();
-    const location = useLocation();
+  // ✅ user from context — updates reactively on login/logout
+  const { user, logout } = useAuth();
+  const { unreadMessages } = useNotifications();
 
-    useEffect(() => {
-      const onScroll = () => setScrolled(window.scrollY > 10);
-      window.addEventListener("scroll", onScroll, { passive: true });
-      return () => window.removeEventListener("scroll", onScroll);
-    }, []);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-    useEffect(() => {
-      setIsMenuOpen(false);
-    }, [location.pathname]);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
-    const handleNavigation = (path) => {
-      navigate(path);
-      setIsMenuOpen(false);
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname]);
+
+  // Prevent background scrolling when mobile menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
     };
+  }, [isMenuOpen]);
 
-    // ✅ Calls api.post("/auth/logout") internally, clears context + cookie
-    const handleLogout = async () => {
-      await logout();
-      navigate("/");
-    };
+  const handleNavigation = (path) => {
+    navigate(path);
+    setIsMenuOpen(false);
+  };
 
-    const isActive = (path) =>
-      location.pathname === path ? "nav-link active" : "nav-link";
+  // ✅ Calls api.post("/auth/logout") internally, clears context + cookie
+  const handleLogout = async () => {
+    await logout();
+    toast.success("Logged out successfully.");
+    navigate("/");
+  };
 
-    return (
+  const isActive = (path) =>
+    location.pathname === path ? "nav-link active" : "nav-link";
+
+  return (
+    <>
+      {isMenuOpen && (
+        <div className="nav-backdrop" onClick={() => setIsMenuOpen(false)} />
+      )}
       <nav className={`navbar${scrolled ? " scrolled" : ""}`}>
         <div className="navbar-container">
 
@@ -56,34 +87,55 @@ import { useState, useEffect, useRef } from "react";
 
           <div className={`nav-menu${isMenuOpen ? " active" : ""}`}>
             <div className="nav-links">
-                <button className={isActive("/")} onClick={() => handleNavigation("/")}>
-      Home
-    </button>
+              <button className={isActive("/")} onClick={() => handleNavigation("/")}>
+                <FiHome className="nav-link-icon" />
+                <span className="nav-link-text">Home</span>
+                <FiChevronRight className="nav-link-chevron" />
+              </button>
 
-    <button className={isActive("/explore")} onClick={() => handleNavigation("/explore")}>
-      Explore Gigs
-    </button>
+              <button className={isActive("/explore")} onClick={() => handleNavigation("/explore")}>
+                <FiCompass className="nav-link-icon" />
+                <span className="nav-link-text">Explore Gigs</span>
+                <FiChevronRight className="nav-link-chevron" />
+              </button>
 
-    {user && (
-      <button
-        className={isActive("/chat")}
-        onClick={() => handleNavigation("/Chat")}
-      >
-        Messages
-      </button>
-    )}
+              {user && (
+                <button
+                  className={isActive("/chat")}
+                  onClick={() => handleNavigation("/chat")}
+                >
+                  <FiMessageSquare className="nav-link-icon" />
+                  <span className="nav-link-text">
+                    Messages
+                    <span className="desktop-unread-count">
+                      {unreadMessages > 0 ? ` (${unreadMessages})` : ""}
+                    </span>
+                    {unreadMessages > 0 && (
+                      <span className="mobile-unread-badge">{unreadMessages}</span>
+                    )}
+                  </span>
+                  <FiChevronRight className="nav-link-chevron" />
+                </button>
+              )}
 
-    <button className={isActive("/become-seller")} onClick={() => handleNavigation("/become-seller")}>
-      Become a Seller
-    </button>
-
+              <button className={isActive("/become-seller")} onClick={() => handleNavigation("/become-seller")}>
+                <FiAward className="nav-link-icon" />
+                <span className="nav-link-text">Become a Seller</span>
+                <FiChevronRight className="nav-link-chevron" />
+              </button>
             </div>
 
             <div className="nav-buttons">
               {!user ? (
                 <>
-                  <button className="btn-login"  onClick={() => handleNavigation("/login")}>Login</button>
-                  <button className="btn-signup" onClick={() => handleNavigation("/signup")}>Sign Up</button>
+                  <button className="btn-login" onClick={() => handleNavigation("/login")}>
+                    <FiLogIn className="btn-auth-icon" />
+                    <span>Login</span>
+                  </button>
+                  <button className="btn-signup" onClick={() => handleNavigation("/signup")}>
+                    <FiUserPlus className="btn-auth-icon" />
+                    <span>Sign Up</span>
+                  </button>
                 </>
               ) : (
                 <div className="user-section">
@@ -96,12 +148,16 @@ import { useState, useEffect, useRef } from "react";
                       <span className="profile-name">{user.name}</span>
                       <span className="profile-role">My Account</span>
                     </div>
-                    <span className="profile-chevron">▾</span>
+                    <span className="profile-chevron-desktop">▾</span>
+                    <FiChevronRight className="profile-chevron-mobile" />
                   </div>
 
                   <NotificationBell />
 
-                  <button className="btn-logout" onClick={handleLogout}>Logout</button>
+                  <button className="btn-logout" onClick={handleLogout}>
+                    <FiLogOut className="btn-logout-icon" />
+                    <span>Logout</span>
+                  </button>
 
                 </div>
               )}
@@ -110,5 +166,6 @@ import { useState, useEffect, useRef } from "react";
 
         </div>
       </nav>
-    );
-  }
+    </>
+  );
+}

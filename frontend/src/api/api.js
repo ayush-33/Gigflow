@@ -31,7 +31,7 @@ api.interceptors.response.use(
     if (!original) return Promise.reject(error);
 
     const status = error.response?.status;
-    const code   = error.response?.data?.code;
+    const code = error.response?.data?.code;
 
     const isAuthRoute =
       original.url.includes("/auth/login") ||

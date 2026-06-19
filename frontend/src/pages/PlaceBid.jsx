@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import api from "../api/api";
+import toast from "react-hot-toast";
 import "../styles/PlaceBid.css";
 
 export default function PlaceBid() {
@@ -12,30 +13,22 @@ export default function PlaceBid() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors,  setErrors]  = useState({});
-  const [toast,   setToast]   = useState(null);
   const [focused, setFocused] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   
 
-  /* Fetch gig info for context */
+  // Gig fetch
   useEffect(() => {
     (async () => {
       try {
-const { data } = await api.get(`/gigs/${id}`);
-setGig(data);
-        
+        const { data } = await api.get(`/gigs/${id}`);
+        setGig(data);
       } catch (err) {
         console.error(err);
       }
     })();
   }, [id]);
-
-  /* Auto-dismiss toast */
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3200);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   /* Client-side validation */
   const validate = () => {
@@ -62,14 +55,11 @@ setGig(data);
       message: message.trim(),
     });
 
-    setToast({ type: "success", message: "Bid submitted successfully! Redirecting…" });
-    setTimeout(() => navigate("/profile", { state: { refresh: Date.now() } }), 1600);
+    toast.success("Bid placed successfully!");
+    setShowSuccessModal(true);
 
   } catch (err) {
-    setToast({
-      type: "error",
-      message: err.response?.data?.message || "Failed to submit bid."
-    });
+    toast.error(err.response?.data?.message || "Failed to submit bid.");
   } finally {
     setLoading(false);
   }
@@ -120,13 +110,7 @@ setGig(data);
             </div>
           </div>
 
-          {/* Toast */}
-          {toast && (
-            <div className={`bid-toast bid-toast--${toast.type}`}>
-              <span className="bid-toast-icon">{toast.type === "success" ? "✓" : "✕"}</span>
-              {toast.message}
-            </div>
-          )}
+
 
           <form onSubmit={handleSubmit} noValidate>
 
@@ -230,6 +214,32 @@ setGig(data);
           </form>
         </div>
       </div>
+
+      {showSuccessModal && (
+        <div className="success-modal-overlay">
+          <div className="success-modal-content">
+            <div className="success-modal-icon">✓</div>
+            <h2 className="success-modal-title">Bid Submitted Successfully</h2>
+            <p className="success-modal-message">
+              Your proposal has been sent to the client successfully.
+            </p>
+            <div className="success-modal-actions">
+              <button
+                className="success-modal-btn-primary"
+                onClick={() => navigate("/profile", { state: { tab: "bids" } })}
+              >
+                View My Bids
+              </button>
+              <button
+                className="success-modal-btn-secondary"
+                onClick={() => navigate("/explore")}
+              >
+                Continue Browsing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

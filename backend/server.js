@@ -63,6 +63,18 @@ io.on("connection", (socket) => {
   // ✅ personal room (for notifications)
   socket.join(socket.userId.toString());
 
+  // ✅ mark any sent messages as delivered since the user is now connected
+  (async () => {
+    try {
+      await Message.updateMany(
+        { receiverId: socket.userId, status: "sent" },
+        { $set: { status: "delivered" } }
+      );
+    } catch (e) {
+      console.error("Error updating message statuses to delivered:", e.message);
+    }
+  })();
+
   /* ─────────────────────────
      🧩 CHAT ROOMS
   ───────────────────────── */
@@ -73,6 +85,13 @@ io.on("connection", (socket) => {
 
   socket.on("markSeen", async ({ roomId }) => {
     if (!roomId || !socket.userId) return;
+    
+    // Mark received messages in this room as read
+    await Message.updateMany(
+      { roomId, receiverId: socket.userId, status: { $ne: "read" } },
+      { $set: { status: "read" } }
+    );
+
     io.to(roomId).emit("messagesSeen", {
       roomId,
       userId: socket.userId,
@@ -100,6 +119,14 @@ io.on("connection", (socket) => {
         return socket.emit("messageError", { error: "Message cannot be empty" });
       }
 
+      const receiverSockets = await io.in(receiverId.toString()).fetchSockets();
+      const isOnline = receiverSockets.length > 0;
+
+      const roomSockets = await io.in(roomId).fetchSockets();
+      const isReceiverInRoom = roomSockets.some(s => s.userId?.toString() === receiverId.toString());
+
+      const initialStatus = isReceiverInRoom ? "read" : (isOnline ? "delivered" : "sent");
+
       const newMsg = await Message.create({
         roomId,
         gigId,
@@ -109,6 +136,7 @@ io.on("connection", (socket) => {
         message,
         price: price || null,
         offerStatus: type === "offer" ? "pending" : null,
+        status: initialStatus
       });
 
       const populated = await newMsg.populate("senderId", "name email");
@@ -117,6 +145,11 @@ io.on("connection", (socket) => {
       // ✅ send to chat room
       io.to(roomId).emit("receiveMessage", populated);
 
+      // ✅ send to receiver's personal room for real-time navbar update
+      if (receiverId) {
+        io.to(receiverId.toString()).emit("newMessage", populated);
+      }
+
       // ✅ send notification to receiver
       if (receiverId) {
         try {
@@ -124,14 +157,20 @@ io.on("connection", (socket) => {
           const Notification = (await import("./models/notificationModel.js")).default;
           const notif = await Notification.create({
             userId: receiverId,
-            type: "message",
+            receiverId: receiverId,
+            senderId: socket.userId,
+            type: "NEW_MESSAGE",
             title: `New message from ${senderName}`,
             body: type === "offer"
+              ? `Sent a price offer of $${price}`
+              : (message || "").slice(0, 80),
+            message: type === "offer"
               ? `Sent a price offer of $${price}`
               : (message || "").slice(0, 80),
             link: "/chat",
             meta: { roomId, gigId },
           });
+          io.to(receiverId.toString()).emit("notification", notif);
           io.to(receiverId.toString()).emit("newNotification", notif);
         } catch (e) {
           console.error("Notification error:", e.message);

@@ -14,46 +14,49 @@ export function AuthProvider({ children }) {
   // ✅ KEY FIX: on page refresh, silently restore the access token
   // The httpOnly refresh cookie is still valid — use it to get a new access token
   const [authReady, setAuthReady] = useState(false);
+  const [socket, setSocket] = useState(null);
 
-useEffect(() => {
-  const restore = async () => {
-    const savedUser = localStorage.getItem("user");
+  useEffect(() => {
+    const restore = async () => {
+      const savedUser = localStorage.getItem("user");
 
-    if (!savedUser) {
-      setAuthReady(true);
-      return;
-    }
-
-    try {
-      const { data } = await api.post("/auth/refresh");
-
-      if (data?.accessToken) {
-        setAccessToken(data.accessToken);
-        setUser(JSON.parse(savedUser));
-        connectSocket();
-      } else {
-        throw new Error("No token received");
+      if (!savedUser) {
+        setAuthReady(true);
+        return;
       }
 
-    } catch (err) {
-      console.error("Auth restore failed:", err);
+      try {
+        const { data } = await api.post("/auth/refresh");
 
-      clearAccessToken();
-      localStorage.removeItem("user");
-      setUser(null);
-    } finally {
-      setAuthReady(true);
-    }
-  };
+        if (data?.accessToken) {
+          setAccessToken(data.accessToken);
+          setUser(JSON.parse(savedUser));
+          const s = connectSocket();
+          setSocket(s);
+        } else {
+          throw new Error("No token received");
+        }
 
-  restore();
-}, []);
+      } catch (err) {
+        console.error("Auth restore failed:", err);
+
+        clearAccessToken();
+        localStorage.removeItem("user");
+        setUser(null);
+      } finally {
+        setAuthReady(true);
+      }
+    };
+
+    restore();
+  }, []);
 
   const login = (accessToken, userData) => {
     setAccessToken(accessToken);
     localStorage.setItem("user", JSON.stringify(userData));
     setUser(userData);
-    connectSocket();
+    const s = connectSocket();
+    setSocket(s);
   };
 
   const logout = async () => {
@@ -61,6 +64,7 @@ useEffect(() => {
     clearAccessToken();
     localStorage.removeItem("user");
     disconnectSocket();
+    setSocket(null);
     setUser(null);
   };
 
@@ -69,7 +73,7 @@ useEffect(() => {
   if (!authReady) return <div>Loading...</div>;
 
   return (
-<AuthContext.Provider value={{ user, setUser, login, logout, authReady }}>
+    <AuthContext.Provider value={{ user, setUser, login, logout, authReady, socket }}>
       {children}
     </AuthContext.Provider>
   );

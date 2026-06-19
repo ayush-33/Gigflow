@@ -1,6 +1,7 @@
 import Message from "../models/message.js";
 import Gig from "../models/gig.js";
 import mongoose from "mongoose";
+import { io } from "../server.js";
 
 /* ── Build roomId (deterministic, order-independent) ── */
 export const buildRoomId = (gigId, userA, userB) => {
@@ -41,7 +42,12 @@ export const getMyChatRooms = async (req, res) => {
     const populated = await Promise.all(
       rooms.map(async (room) => {
         const gig = await Gig.findById(room.gigId).select("title price image").lean();
-        return { ...room, gig };
+        const unreadCount = await Message.countDocuments({
+          roomId: room._id,
+          receiverId: req.userId,
+          status: { $ne: "read" }
+        });
+        return { ...room, gig, unreadCount };
       })
     );
 
@@ -64,6 +70,20 @@ export const getRoomMessages = async (req, res) => {
         first.receiverId.toString() === req.userId;
       if (!isParticipant)
         return res.status(403).json({ message: "Not authorized to view this chat" });
+    }
+
+    // Mark messages in this room received by current user as read
+    await Message.updateMany(
+      { roomId, receiverId: req.userId, status: { $ne: "read" } },
+      { $set: { status: "read" } }
+    );
+
+    // Notify room that messages have been read
+    if (io) {
+      io.to(roomId).emit("messagesSeen", {
+        roomId,
+        userId: req.userId,
+      });
     }
 
     const messages = await Message.find({ roomId })
@@ -99,6 +119,19 @@ export const updateOfferStatus = async (req, res) => {
     await msg.save();
 
     res.json(msg);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ---------- Get unread message count for user ---------- */
+export const getUnreadMessageCount = async (req, res) => {
+  try {
+    const count = await Message.countDocuments({
+      receiverId: req.userId,
+      status: { $ne: "read" }
+    });
+    res.json({ unreadCount: count });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

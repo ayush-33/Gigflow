@@ -2,49 +2,90 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import api from "../api/api";
 import { useAuth } from "./AuthContext";
 import { getAccessToken } from "../utils/auth";
-import { connectSocket, disconnectSocket, getSocket } from "../utils/socket";
+import { getSocket } from "../utils/socket";
+import toast from "react-hot-toast";
 
 const NotificationContext = createContext();
 
 export function NotificationProvider({ children }) {
-  const { user } = useAuth();
+  const { user, socket } = useAuth();
   const [notifications, setNotifications] = useState([]);
-const fetchNotifications = useCallback(async () => {
-  if (!user || !getAccessToken()) {
-    setNotifications([]);
-    return;
-  }
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
-  try {
-    const { data } = await api.get("/notifications");
-    setNotifications(Array.isArray(data) ? data : []);
-  } catch (err) {
-    console.log("Notification error:", err.response?.data);
-  }
-}, [user]);
+  const showToast = useCallback((message, type = "success") => {
+    if (type === "success") {
+      toast.success(message);
+    } else if (type === "error") {
+      toast.error(message);
+    } else if (type === "message" || type === "info") {
+      toast(message, { icon: "💬" });
+    } else {
+      toast(message, { icon: "🔔" });
+    }
+  }, []);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!user || !getAccessToken()) {
+      setNotifications([]);
+      setUnreadMessages(0);
+      return;
+    }
+
+    try {
+      const [notifRes, chatRes] = await Promise.all([
+        api.get("/notifications"),
+        api.get("/chat/unread-count")
+      ]);
+      setNotifications(Array.isArray(notifRes.data) ? notifRes.data : []);
+      setUnreadMessages(chatRes.data.unreadCount || 0);
+    } catch (err) {
+      console.log("Notification fetch error:", err.response?.data);
+    }
+  }, [user]);
 
   // Connect socket when user logs in, disconnect on logout
-useEffect(() => {
-  if (!user || !getAccessToken()) {
-    setNotifications([]);
-    return;
-  }
+  useEffect(() => {
+    if (!user || !getAccessToken()) {
+      setNotifications([]);
+      setUnreadMessages(0);
+      return;
+    }
 
-  fetchNotifications();
+    fetchNotifications();
 
-  const socket = getSocket();
-  if (!socket) return;
+    if (!socket) return;
 
-  socket.on("notification", (newNotif) => {
-    setNotifications((prev) => [newNotif, ...prev]);
-  });
+    const handleNotification = (newNotif) => {
+      setNotifications((prev) => [newNotif, ...prev]);
+      showToast(newNotif.message || newNotif.body || "New notification!", "info");
+    };
 
-  return () => {
-    socket.off("notification");
-  };    
-}, [user, fetchNotifications]);
+    const handleNewMessage = (msg) => {
+      // ✅ Only toast and increment if the message is actually unread/new
+      if (msg.status === "read") return;
+      
+      setUnreadMessages((prev) => prev + 1);
+      showToast(`${msg.senderId?.name || "Someone"} sent you a message: "${msg.message.slice(0, 40)}${msg.message.length > 40 ? '...' : ''}"`, "message");
+    };
 
-  // Poll every 60s as fallback (reduced from 30s since socket handles real-time)
+    const handleMessagesSeen = () => {
+      fetchNotifications();
+    };
+
+    socket.on("notification", handleNotification);
+    socket.on("newNotification", handleNotification);
+    socket.on("newMessage", handleNewMessage);
+    socket.on("messagesSeen", handleMessagesSeen);
+
+    return () => {
+      socket.off("notification", handleNotification);
+      socket.off("newNotification", handleNotification);
+      socket.off("newMessage", handleNewMessage);
+      socket.off("messagesSeen", handleMessagesSeen);
+    };    
+  }, [user, socket, fetchNotifications, showToast]);
+
+  // Poll every 60s as fallback
   useEffect(() => {
     if (!user || !getAccessToken()) return;
     const id = setInterval(fetchNotifications, 60_000);
@@ -83,7 +124,16 @@ useEffect(() => {
 
   return (
     <NotificationContext.Provider
-      value={{ notifications, fetchNotifications, markOneAsRead, markAllRead, deleteOne, clearAll }}
+      value={{ 
+        notifications, 
+        fetchNotifications, 
+        markOneAsRead, 
+        markAllRead, 
+        deleteOne, 
+        clearAll,
+        unreadMessages,
+        setUnreadMessages
+      }}
     >
       {children}
     </NotificationContext.Provider>
