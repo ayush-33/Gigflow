@@ -5,7 +5,8 @@ import {
   checkUserBid,
   acceptBid,
   rejectBid,
-  withdrawBid
+  withdrawBid,
+  counterBid
 } from "../controllers/bidController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -17,6 +18,7 @@ router.get("/:gigId",               protect, getBidsByGig);
 
 router.put("/accept/:bidId",        protect, acceptBid);
 router.put("/reject/:bidId",        protect, rejectBid);
+router.put("/counter/:bidId",       protect, counterBid);
 
 // ✅ FIX: was PUT, must be DELETE to match Profile.jsx's doAction call
 router.delete("/withdraw/:bidId",   protect, withdrawBid);

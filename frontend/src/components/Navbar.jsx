@@ -105,13 +105,10 @@ export default function Navbar() {
                   onClick={() => handleNavigation("/chat")}
                 >
                   <FiMessageSquare className="nav-link-icon" />
-                  <span className="nav-link-text">
+                  <span className="nav-link-text" style={{ display: "inline-flex", alignItems: "center" }}>
                     Messages
-                    <span className="desktop-unread-count">
-                      {unreadMessages > 0 ? ` (${unreadMessages})` : ""}
-                    </span>
                     {unreadMessages > 0 && (
-                      <span className="mobile-unread-badge">{unreadMessages}</span>
+                      <span className="navbar-unread-badge">{unreadMessages}</span>
                     )}
                   </span>
                   <FiChevronRight className="nav-link-chevron" />

@@ -60,7 +60,7 @@ export default function Checkout() {
       setOrderRef(data.order.orderRef);
       sessionStorage.removeItem("checkout_gig");
       sessionStorage.removeItem("checkout_bid");
-      toast.success("Payment Completed Successfully! 🎉");
+      toast.success("✅ Payment Successful");
       setStep(2);
     } catch (err) {
       const errMsg = err.response?.data?.message || 'Payment failed. Please try again.';

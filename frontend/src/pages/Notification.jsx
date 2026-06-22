@@ -10,6 +10,7 @@ const TYPE_META = {
   bidAccepted: { icon: "🎉", label: "Hired",    color: "hired"   },
   BID_ACCEPTED: { icon: "🎉", label: "Hired",    color: "hired"   },
   bid_accepted: { icon: "🎉", label: "Hired",    color: "hired"   },
+  GIG_HIRED: { icon: "🎉", label: "Hired",    color: "hired"   },
   
   bidRejected: { icon: "😞", label: "Rejected",  color: "rejected" },
   BID_REJECTED: { icon: "😞", label: "Rejected",  color: "rejected" },
@@ -19,11 +20,16 @@ const TYPE_META = {
   NEW_MESSAGE: { icon: "💬", label: "Message",   color: "message"  },
   
   NEW_BID:     { icon: "📥", label: "New Bid",   color: "system"   },
+  COUNTER_OFFER_RECEIVED: { icon: "↩", label: "Counter", color: "system" },
+  ORDER_COMPLETED: { icon: "✅", label: "Completed", color: "hired" },
   
   PROJECT_AWARDED: { icon: "🏆", label: "Awarded", color: "hired" },
   PROJECT_COMPLETED: { icon: "✅", label: "Completed", color: "hired" },
   PAYMENT_RECEIVED: { icon: "💰", label: "Paid", color: "system" },
   CONTRACT_STARTED: { icon: "🚀", label: "Started", color: "system" },
+  WORK_SUBMITTED: { icon: "📤", label: "Work Submitted", color: "system" },
+  WORK_APPROVED: { icon: "✅", label: "Work Approved", color: "hired" },
+  REVISIONS_REQUESTED: { icon: "🔄", label: "Revisions Requested", color: "rejected" },
   
   default:     { icon: "🔔", label: "Update",    color: "system"   },
 };
@@ -285,6 +291,21 @@ const { notifications, markOneAsRead, markAllRead, fetchNotifications } = useNot
                       <div className="notif-message">{n.message}</div>
                       <div className="notif-time">{relTime(n.createdAt)}</div>
                     </div>
+                    {n.type === "REVISIONS_REQUESTED" && n.meta?.notes && (
+                      <div className="notif-revision-notes" style={{
+                        marginTop: "8px",
+                        padding: "10px 12px",
+                        background: "rgba(239, 68, 68, 0.08)",
+                        borderLeft: "3px solid #ef4444",
+                        borderRadius: "4px",
+                        fontSize: "13px",
+                        color: "#f87171",
+                        lineHeight: "1.5"
+                      }}>
+                        <strong style={{ color: "#ef4444", marginRight: "4px" }}>Revision Notes:</strong>
+                        {n.meta.notes}
+                      </div>
+                    )}
                     <div className="notif-actions">
                       <span className={`notif-tag tag-${meta.color}`}>{meta.label}</span>
                       {n.link && (

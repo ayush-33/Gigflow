@@ -38,7 +38,7 @@ const gigSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ["open", "assigned"],
+    enum: ["open", "assigned", "hired", "in_progress", "submitted", "completed"],
     default: "open"
   },
 
@@ -51,6 +51,11 @@ const gigSchema = new mongoose.Schema({
   reviewCount: {
     type: Number,
     default: 0
+  },
+
+  tags: {
+    type: [String],
+    default: []
   }
 
 }, { timestamps: true });

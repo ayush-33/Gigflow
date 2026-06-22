@@ -47,3 +47,8 @@
 .btn-success-primary { padding: 13px; background: var(--brand, #6366f1); color: #fff; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 15px; }
 .btn-success-ghost { padding: 13px; background: #fff; color: var(--brand, #6366f1); border: 1.5px solid var(--brand, #6366f1); border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 15px; }
 @media (max-width: 700px) { .checkout-container { grid-template-columns: 1fr; } .checkout-right { position: static; } }
+@media (max-width: 480px) {
+  .checkout-left { padding: 1.25rem; }
+  .form-row-2 { grid-template-columns: 1fr; }
+  .checkout-success-card { padding: 2rem 1.5rem; }
+}

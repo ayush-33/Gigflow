@@ -24,28 +24,33 @@ export const createReview = async (req, res) => {
 
     const gig = await Gig.findById(gigId);
     if (!gig) return res.status(404).json({ message: "Gig not found" });
-    if (gig.status !== "assigned")
+    if (gig.status !== "completed")
       return res.status(400).json({ message: "You can only review a completed gig." });
 
-    // Verify buyer was involved (had an accepted bid OR is the gig owner reviewing the seller)
     const bid = await Bid.findOne({
-  gigId,
-  status: "hired"
-});
+      gigId,
+      status: "completed"
+    });
     if (!bid)
-      return res.status(403).json({ message: "No hired bid found on this gig." });
+      return res.status(403).json({ message: "No completed bid found on this gig." });
 
-    if (gig.ownerId.toString() !== req.userId)
-      return res.status(403).json({ message: "Only the gig owner can leave a review." });
+    const isOwner = gig.ownerId.toString() === req.userId;
+    const isFreelancer = bid.bidderId.toString() === req.userId;
+
+    if (!isOwner && !isFreelancer)
+      return res.status(403).json({ message: "Only project participants can review." });
 
     const existing = await Review.findOne({ gigId, reviewerId: req.userId });
     if (existing)
       return res.status(400).json({ message: "You have already reviewed this gig." });
 
+    const revieweeId = isOwner ? bid.bidderId : gig.ownerId;
+
     const review = await Review.create({
       gigId,
       reviewerId: req.userId,
-      sellerId: bid.bidderId,
+      sellerId: bid.bidderId, // always freelancer
+      revieweeId,
       bidId: bid._id,
       rating: Number(rating),
       comment: comment.trim()
@@ -53,14 +58,16 @@ export const createReview = async (req, res) => {
 
     await notifyUser({
       senderId: req.userId,
-      receiverId: bid.bidderId,
+      receiverId: revieweeId,
       type: "PROJECT_COMPLETED",
-      title: "Project Completed",
-      message: `Project "${gig.title}" has been marked as completed.`,
+      title: "New Review Received",
+      message: `You received a ${rating}-star review on "${gig.title}".`,
       link: "/profile"
     });
 
-    await recalcRating(gigId);
+    if (isOwner) {
+      await recalcRating(gigId);
+    }
 
     const populated = await review.populate("reviewerId", "name");
     res.status(201).json(populated);
@@ -100,14 +107,41 @@ export const checkCanReview = async (req, res) => {
     const gig = await Gig.findById(gigId);
     if (!gig) return res.status(404).json({ message: "Gig not found" });
 
+    if (gig.status !== "completed") {
+      return res.json({ canReview: false, alreadyReviewed: false });
+    }
+
+    const hiredBid = await Bid.findOne({ gigId, status: "completed" });
+    if (!hiredBid) {
+      return res.json({ canReview: false, alreadyReviewed: false });
+    }
+
     const isOwner = gig.ownerId.toString() === req.userId;
+    const isFreelancer = hiredBid.bidderId.toString() === req.userId;
+
+    if (!isOwner && !isFreelancer) {
+      return res.json({ canReview: false, alreadyReviewed: false });
+    }
+
     const alreadyReviewed = await Review.findOne({ gigId, reviewerId: req.userId });
-    const hiredBid = await Bid.findOne({ gigId, status: "hired" });
 
     res.json({
-      canReview: isOwner && gig.status === "assigned" && !alreadyReviewed && !!hiredBid,
+      canReview: !alreadyReviewed,
       alreadyReviewed: !!alreadyReviewed
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* ---------- Get My Received Reviews ---------- */
+export const getMyReviews = async (req, res) => {
+  try {
+    const reviews = await Review.find({ revieweeId: req.userId })
+      .populate("reviewerId", "name email")
+      .populate("gigId", "title")
+      .sort({ createdAt: -1 });
+    res.json(reviews);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

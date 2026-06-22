@@ -18,7 +18,7 @@ export const markAsRead = async (req, res) => {
   try {
     await Notification.findOneAndUpdate(
       { _id: req.params.id, userId: req.userId },  // ✅ security: ensure ownership
-      { isRead: true }
+      { isRead: true, read: true }
     );
     res.status(200).json({ message: "Notification marked as read" });
   } catch (error) {
@@ -31,7 +31,7 @@ export const markAllAsRead = async (req, res) => {
   try {
     await Notification.updateMany(
       { userId: req.userId, isRead: false },
-      { isRead: true }
+      { isRead: true, read: true }
     );
     res.status(200).json({ message: "All notifications marked as read" });
   } catch (error) {

@@ -54,7 +54,7 @@ const { data } = await api.get(`/gigs/${id}`);
           category:     data.category     || "",
           deliveryTime: data.deliveryTime || "",
         });
-        if (data.image) setPreview(`http://localhost:5000/uploads/${data.image}`);
+        if (data.image) setPreview(`http://localhost:5001/uploads/${data.image}`);
       } catch {
         showToast("Failed to load gig data.", "error");
       } finally {

@@ -66,10 +66,21 @@ io.on("connection", (socket) => {
   // ✅ mark any sent messages as delivered since the user is now connected
   (async () => {
     try {
-      await Message.updateMany(
-        { receiverId: socket.userId, status: "sent" },
-        { $set: { status: "delivered" } }
-      );
+      const sentMsgs = await Message.find({ receiverId: socket.userId, status: "sent" });
+      if (sentMsgs.length > 0) {
+        await Message.updateMany(
+          { receiverId: socket.userId, status: "sent" },
+          { $set: { status: "delivered" } }
+        );
+        // Notify senders that their messages are now delivered
+        const senders = [...new Set(sentMsgs.map(m => m.senderId.toString()))];
+        senders.forEach(senderId => {
+          io.to(senderId).emit("messagesDelivered", {
+            receiverId: socket.userId,
+            roomId: sentMsgs.find(m => m.senderId.toString() === senderId)?.roomId
+          });
+        });
+      }
     } catch (e) {
       console.error("Error updating message statuses to delivered:", e.message);
     }
@@ -88,8 +99,8 @@ io.on("connection", (socket) => {
     
     // Mark received messages in this room as read
     await Message.updateMany(
-      { roomId, receiverId: socket.userId, status: { $ne: "read" } },
-      { $set: { status: "read" } }
+      { roomId, receiverId: socket.userId, isRead: false },
+      { $set: { isRead: true, readAt: new Date(), status: "read" } }
     );
 
     io.to(roomId).emit("messagesSeen", {
@@ -119,6 +130,36 @@ io.on("connection", (socket) => {
         return socket.emit("messageError", { error: "Message cannot be empty" });
       }
 
+      // Security check: one must be gig owner, other must be bidder
+      const Gig = (await import("./models/gig.js")).default;
+      const Bid = (await import("./models/bid.js")).default;
+
+      const gig = await Gig.findById(gigId);
+      if (!gig) {
+        return socket.emit("messageError", { error: "Gig not found" });
+      }
+
+      const userA = socket.userId.toString();
+      const userB = receiverId.toString();
+
+      const expectedRoomId = [userA, userB].sort().join("_");
+      if (roomId !== expectedRoomId) {
+        return socket.emit("messageError", { error: "Not authorized: invalid room ID for these participants" });
+      }
+
+      const isUserAOwner = gig.ownerId.toString() === userA;
+      const isUserBOwner = gig.ownerId.toString() === userB;
+
+      if (!isUserAOwner && !isUserBOwner) {
+        return socket.emit("messageError", { error: "Not authorized: one participant must be the gig owner" });
+      }
+
+      const bidderId = isUserAOwner ? userB : userA;
+      const bid = await Bid.findOne({ gigId, bidderId });
+      if (!bid) {
+        return socket.emit("messageError", { error: "Not authorized: freelancer must have bid on this gig" });
+      }
+
       const receiverSockets = await io.in(receiverId.toString()).fetchSockets();
       const isOnline = receiverSockets.length > 0;
 
@@ -126,6 +167,9 @@ io.on("connection", (socket) => {
       const isReceiverInRoom = roomSockets.some(s => s.userId?.toString() === receiverId.toString());
 
       const initialStatus = isReceiverInRoom ? "read" : (isOnline ? "delivered" : "sent");
+
+      const isRead = initialStatus === "read";
+      const readAt = isRead ? new Date() : null;
 
       const newMsg = await Message.create({
         roomId,
@@ -136,11 +180,27 @@ io.on("connection", (socket) => {
         message,
         price: price || null,
         offerStatus: type === "offer" ? "pending" : null,
-        status: initialStatus
+        status: initialStatus,
+        isRead,
+        readAt
       });
 
       const populated = await newMsg.populate("senderId", "name email");
       await populated.populate("receiverId", "name email");
+
+      // Update Bid document if it's a price offer
+      if (type === "offer" && bid) {
+        bid.price = Number(price);
+        bid.status = "countered";
+        bid.lastOfferBy = socket.userId;
+        bid.negotiationHistory.push({
+          price: Number(price),
+          message: message?.trim() || `Proposed a price offer of $${price}`,
+          senderId: socket.userId,
+          timestamp: new Date()
+        });
+        await bid.save();
+      }
 
       // ✅ send to chat room
       io.to(roomId).emit("receiveMessage", populated);
@@ -150,28 +210,20 @@ io.on("connection", (socket) => {
         io.to(receiverId.toString()).emit("newMessage", populated);
       }
 
-      // ✅ send notification to receiver
-      if (receiverId) {
+      // ✅ send notification to receiver (only for offers / counters, normal text messages only trigger newMessage socket event)
+      if (receiverId && type === "offer") {
         try {
           const senderName = populated.senderId?.name || "Someone";
-          const Notification = (await import("./models/notificationModel.js")).default;
-          const notif = await Notification.create({
-            userId: receiverId,
-            receiverId: receiverId,
+          const { notifyUser } = await import("./utils/notifyUser.js");
+          await notifyUser({
             senderId: socket.userId,
-            type: "NEW_MESSAGE",
-            title: `New message from ${senderName}`,
-            body: type === "offer"
-              ? `Sent a price offer of $${price}`
-              : (message || "").slice(0, 80),
-            message: type === "offer"
-              ? `Sent a price offer of $${price}`
-              : (message || "").slice(0, 80),
-            link: "/chat",
+            receiverId,
+            type: "COUNTER_OFFER_RECEIVED",
+            title: "Counter Offer Received",
+            message: `${senderName} proposed a price offer of $${price}`,
+            link: "/profile",
             meta: { roomId, gigId },
           });
-          io.to(receiverId.toString()).emit("notification", notif);
-          io.to(receiverId.toString()).emit("newNotification", notif);
         } catch (e) {
           console.error("Notification error:", e.message);
         }
@@ -254,11 +306,36 @@ app.use("/api/orders", orderRoutes);
 
 app.get("/", (req, res) => res.send("GigFlow Backend Running"));
 
+const normalizeRoomIds = async () => {
+  try {
+    const Message = (await import("./models/message.js")).default;
+    const messages = await Message.find({ roomId: { $regex: /_.*_/ } });
+    if (messages.length > 0) {
+      console.log(`[MIGRATION] Normalizing ${messages.length} messages with 3-part roomIds...`);
+      let count = 0;
+      for (const msg of messages) {
+        const parts = msg.roomId.split("_");
+        if (parts.length === 3) {
+          msg.roomId = [parts[1], parts[2]].sort().join("_");
+          await msg.save();
+          count++;
+        }
+      }
+      console.log(`[MIGRATION] Normalization complete. ${count} messages updated.`);
+    }
+  } catch (err) {
+    console.error("[MIGRATION] Error normalizing room IDs:", err);
+  }
+};
+
 /* ─────────────────────────
    🗄 DATABASE
 ───────────────────────── */
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
+  .then(() => {
+    console.log("MongoDB connected");
+    normalizeRoomIds();
+  })
   .catch(err => {
     console.error(err);
     process.exit(1);

@@ -11,6 +11,8 @@ const messageSchema = new mongoose.Schema(
     price:      { type: Number, default: null },           // only for type="offer"
     offerStatus:{ type: String, enum: ["pending", "accepted", "rejected", "countered"], default: null },
     status:     { type: String, enum: ["sent", "delivered", "read"], default: "sent" },
+    isRead:     { type: Boolean, default: false },
+    readAt:     { type: Date, default: null }
   },
   { timestamps: true }
 );

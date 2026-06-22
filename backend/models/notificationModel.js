@@ -19,6 +19,7 @@ const notificationSchema = new mongoose.Schema(
   type: {
     type: String,
     enum: [
+      // Primary types (uppercase, canonical)
       "BID_SUBMITTED",
       "BID_ACCEPTED",
       "BID_REJECTED",
@@ -29,13 +30,20 @@ const notificationSchema = new mongoose.Schema(
       "PAYMENT_RECEIVED",
       "CONTRACT_STARTED",
       "GIG_DELETED",
+      "COUNTER_OFFER_RECEIVED",
+      "GIG_HIRED",
+      "ORDER_COMPLETED",
+      "WORK_SUBMITTED",
+      "WORK_APPROVED",
+      "REVISIONS_REQUESTED",
+      // Legacy/lowercase aliases (kept for backward-compat)
       "message",
       "offer",
       "bid_accepted",
       "bid_rejected",
       "payment_received",
       "bidAccepted",
-      "bidRejected"
+      "bidRejected",
     ],
     required: true
   },

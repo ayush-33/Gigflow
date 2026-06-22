@@ -15,7 +15,7 @@ export const connectSocket = () => {
     socket = null;
   }
 
-  socket = io("http://localhost:5000", {
+  socket = io("http://localhost:5001", {
     auth: { token },
     reconnectionAttempts: 5,
     reconnectionDelay: 2000,

@@ -10,6 +10,23 @@ export const notifyUser = async (data) => {
   const resolvedTitle = title || data.title || "New Update";
   const resolvedLink = link || data.link || "/";
 
+  // Deduplication check: check if an identical notification exists within the last 60 seconds
+  const targetEntityId = meta?.gigId?.toString() || meta?.bidId?.toString() || meta?.orderId?.toString() || resolvedLink || "";
+  const sixtySecondsAgo = new Date(Date.now() - 60000);
+  const duplicate = await Notification.findOne({
+    receiverId: resolvedReceiverId,
+    type,
+    createdAt: { $gte: sixtySecondsAgo }
+  });
+
+  if (duplicate) {
+    const duplicateTargetEntityId = duplicate.meta?.gigId?.toString() || duplicate.meta?.bidId?.toString() || duplicate.meta?.orderId?.toString() || duplicate.link || "";
+    if (duplicateTargetEntityId === targetEntityId) {
+      console.log(`[DEDUPLICATION] Skipping duplicate notification of type: ${type} for receiver: ${resolvedReceiverId}`);
+      return duplicate;
+    }
+  }
+
   const notification = await Notification.create({
     senderId: senderId || null,
     receiverId: resolvedReceiverId,

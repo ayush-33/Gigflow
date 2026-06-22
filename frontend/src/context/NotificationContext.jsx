@@ -63,7 +63,12 @@ export function NotificationProvider({ children }) {
     const handleNewMessage = (msg) => {
       // ✅ Only toast and increment if the message is actually unread/new
       if (msg.status === "read") return;
-      
+
+      // ✅ Skip toast & increment if user is already in this chat room
+      if (window.location.pathname === `/chat/${msg.roomId}`) {
+        return;
+      }
+
       setUnreadMessages((prev) => prev + 1);
       showToast(`${msg.senderId?.name || "Someone"} sent you a message: "${msg.message.slice(0, 40)}${msg.message.length > 40 ? '...' : ''}"`, "message");
     };
@@ -73,16 +78,14 @@ export function NotificationProvider({ children }) {
     };
 
     socket.on("notification", handleNotification);
-    socket.on("newNotification", handleNotification);
     socket.on("newMessage", handleNewMessage);
     socket.on("messagesSeen", handleMessagesSeen);
 
     return () => {
       socket.off("notification", handleNotification);
-      socket.off("newNotification", handleNotification);
       socket.off("newMessage", handleNewMessage);
       socket.off("messagesSeen", handleMessagesSeen);
-    };    
+    };
   }, [user, socket, fetchNotifications, showToast]);
 
   // Poll every 60s as fallback
@@ -96,7 +99,7 @@ export function NotificationProvider({ children }) {
     try {
       await api.put(`/notifications/${id}/read`);
       setNotifications((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
+        prev.map((n) => (n._id === id ? { ...n, isRead: true, read: true } : n))
       );
     } catch { /* silent */ }
   };
@@ -104,7 +107,7 @@ export function NotificationProvider({ children }) {
   const markAllRead = async () => {
     try {
       await api.put("/notifications/mark-all-read");
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true, read: true })));
     } catch { /* silent */ }
   };
 
@@ -124,12 +127,12 @@ export function NotificationProvider({ children }) {
 
   return (
     <NotificationContext.Provider
-      value={{ 
-        notifications, 
-        fetchNotifications, 
-        markOneAsRead, 
-        markAllRead, 
-        deleteOne, 
+      value={{
+        notifications,
+        fetchNotifications,
+        markOneAsRead,
+        markAllRead,
+        deleteOne,
         clearAll,
         unreadMessages,
         setUnreadMessages

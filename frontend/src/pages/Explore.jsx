@@ -70,22 +70,22 @@ function buildImageUrl(image) {
   // Windows absolute path
   if (image.includes('\\')) {
     const filename = image.split('\\').pop();
-    return `http://localhost:5000/uploads/${filename}`;
+    return `http://localhost:5001/uploads/${filename}`;
   }
 
   // Unix absolute path
   if (image.includes('/uploads/')) {
     const filename = image.split('/uploads/').pop();
-    return `http://localhost:5000/uploads/${filename}`;
+    return `http://localhost:5001/uploads/${filename}`;
   }
 
   // Relative path starting with uploads/
   if (image.startsWith('uploads/')) {
-    return `http://localhost:5000/${image}`;
+    return `http://localhost:5001/${image}`;
   }
 
   // Plain filename only
-  return `http://localhost:5000/uploads/${image}`;
+  return `http://localhost:5001/uploads/${image}`;
 }
 
 /* ─── Skeleton ─── */
@@ -126,7 +126,7 @@ delivery: gig.deliveryTime || 1,
   }), [gig._id]);
 
   const imageUrl = buildImageUrl(gig.image);
-  const isAssigned = gig.status === "assigned";
+  const isAssigned = ["assigned", "hired", "in_progress", "submitted", "completed"].includes(gig.status);
 
   return (
     <div className="gig-card" onClick={() => onNavigate(`/gig/${gig._id}`)}>
@@ -160,11 +160,20 @@ delivery: gig.deliveryTime || 1,
         >
           {saved ? "❤️" : "🤍"}
         </button>
-        {isAssigned ? (
-  <span className="gig-hired-badge">🔒 Hired</span>
-) : (
-  <span className="gig-open-badge">✓ Open</span>
-)}
+        {/* Status badge with granular workflow states */}
+        {gig.status === "open" ? (
+          <span className="gig-open-badge">✓ Open</span>
+        ) : gig.status === "submitted" ? (
+          <span className="gig-hired-badge" style={{ background: "rgba(139,92,246,0.85)", color: "#fff" }}>📤 Under Review</span>
+        ) : gig.status === "completed" ? (
+          <span className="gig-hired-badge" style={{ background: "rgba(16, 185, 129, 0.85)", color: "#fff", borderColor: "rgba(16, 185, 129, 0.5)" }}>✅ Completed</span>
+        ) : ["in_progress", "hired"].includes(gig.status) ? (
+          <span className="gig-hired-badge" style={{ background: "rgba(245, 158, 11, 0.85)", color: "#fff", borderColor: "rgba(245, 158, 11, 0.5)" }}>🔨 In Progress</span>
+        ) : isAssigned ? (
+          <span className="gig-hired-badge">🔒 Hired</span>
+        ) : (
+          <span className="gig-open-badge">✓ Open</span>
+        )}
       </div>
 
       <div className="gig-content">
@@ -348,12 +357,15 @@ useEffect(() => {
     let result = [...allGigs];
 
     if (liveQuery.trim()) {
-      const q = liveQuery.toLowerCase();
-      result = result.filter(
-        (g) =>
-          g.title?.toLowerCase().includes(q) ||
-          g.description?.toLowerCase().includes(q) ||
-          g.category?.toLowerCase().includes(q)
+      const keywords = liveQuery.trim().split(/\s+/).filter(Boolean);
+      const regexes = keywords.map(kw => new RegExp(kw, "i"));
+      result = result.filter((g) =>
+        regexes.every((regex) =>
+          regex.test(g.title || "") ||
+          regex.test(g.description || "") ||
+          regex.test(g.category || "") ||
+          (g.tags && g.tags.some((tag) => regex.test(tag)))
+        )
       );
     }
 

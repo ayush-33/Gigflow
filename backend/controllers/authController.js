@@ -127,7 +127,10 @@ export const refreshAccessToken = async (req, res) => {
 
     setRefreshCookie(res, newRefreshToken);
 
-    res.json({ accessToken: newAccessToken });
+    res.json({
+      accessToken: newAccessToken,
+      user: { _id: user._id, name: user.name, email: user.email }
+    });
 
   } catch (err) {
     res.status(500).json({ message: err.message });

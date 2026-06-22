@@ -8,7 +8,22 @@ import "../styles/Chat.css";
 
 /* ── helpers ── */
 function buildRoomId(gigId, userA, userB) {
-  return `${gigId}_${[userA, userB].sort().join("_")}`;
+  return [userA, userB].sort().join("_");
+}
+
+function relTime(dateStr) {
+  if (!dateStr) return "";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return "Just now";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d === 1) return "Yesterday";
+  if (d < 7) return `${d}d ago`;
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function formatTime(dateStr) {
@@ -28,7 +43,7 @@ function formatDay(dateStr) {
 }
 
 /* ── Offer bubble ── */
-function OfferBubble({ msg, isMine, onAccept, onReject, onCounter }) {
+function OfferBubble({ msg, isMine }) {
   const isPending  = msg.offerStatus === "pending";
   const isAccepted = msg.offerStatus === "accepted";
   const isRejected = msg.offerStatus === "rejected";
@@ -43,16 +58,8 @@ function OfferBubble({ msg, isMine, onAccept, onReject, onCounter }) {
       </div>
 
       {isPending && !isMine && (
-        <div className="offer-actions">
-          <button className="offer-btn accept" onClick={() => onAccept(msg._id)}>
-            ✓ Accept
-          </button>
-          <button className="offer-btn counter" onClick={() => onCounter(msg.price)}>
-            ↩ Counter
-          </button>
-          <button className="offer-btn reject" onClick={() => onReject(msg._id)}>
-            ✕ Decline
-          </button>
+        <div className="offer-status-redirect">
+          👉 Respond to this offer on your Dashboard
         </div>
       )}
 
@@ -132,6 +139,7 @@ function MessageBubble({ msg, isMine, onAccept, onReject, onCounter }) {
 
 /* ── Room list sidebar item ── */
 function RoomItem({ room, active, onClick, currentUserId }) {
+  const lastMsgTime = room.lastMessage?.createdAt ? relTime(room.lastMessage.createdAt) : "";
 
   return (
     <div
@@ -139,25 +147,28 @@ function RoomItem({ room, active, onClick, currentUserId }) {
       onClick={onClick}
     >
       <div className="room-avatar">
-        {room.gig?.title?.charAt(0)?.toUpperCase() || "G"}
+        {room.otherUser?.name?.charAt(0)?.toUpperCase() || "U"}
       </div>
       <div className="room-info">
-        <div className="room-gig-title">{room.gig?.title || "Gig Chat"}</div>
-        <div className="room-last-msg">
-{room.lastMessage?.type === "offer"
-  ? `💰 Offer: $${room.lastMessage?.price}`
-  : (room.lastMessage?.message || "").slice(0, 40) + (room.lastMessage?.message?.length > 40 ? "…" : "")}
+        <div className="room-info-main">
+          <span className={`room-participant-name ${room.unreadCount > 0 ? "unread-bold" : ""}`}>
+            {room.otherUser?.name || "Participant"}
+          </span>
+          <div className={`room-last-msg ${room.unreadCount > 0 ? "unread-bold" : ""}`}>
+            {room.lastMessage?.type === "offer"
+              ? `💰 Offer: $${room.lastMessage?.price}`
+              : room.lastMessage?.message || "No messages yet"}
+          </div>
+        </div>
+        <div className="room-info-meta">
+          <span className="room-time">{lastMsgTime}</span>
+          {room.unreadCount > 0 && (
+            <span className="room-unread-badge">
+              {room.unreadCount}
+            </span>
+          )}
         </div>
       </div>
-      <div className="room-meta">
-  <span className="room-time">
-    {room.lastMessage?.createdAt && formatTime(room.lastMessage.createdAt)}
-  </span>
-
-  {room.unreadCount > 0 && (
-    <span className="room-badge">{room.unreadCount}</span>
-  )}
-</div>
     </div>
   );
 }
@@ -191,6 +202,11 @@ export default function Chat() {
   const messagesEndRef = useRef(null);
   const typingTimer    = useRef(null);
   const socket         = getSocket();
+
+  const otherUserName = activeRoom?.otherUser?.name 
+    || rooms.find(r => r._id === activeRoom?.roomId)?.otherUser?.name
+    || location.state?.receiverName
+    || "Chat";
 
   const showToast = (msg, type = "success") => {
     if (type === "success") {
@@ -233,8 +249,10 @@ useEffect(() => {
       receiverId:  initReceiverId,
       gigTitle:    initGigTitle,
       gigPrice:    initGigPrice,
+      otherUser:   { name: location.state?.receiverName || "User" }
     });
-  }, [initGigId, initReceiverId, user, initGigTitle, initGigPrice]);
+    navigate(`/chat/${rId}`, { replace: true });
+  }, [initGigId, initReceiverId, user, initGigTitle, initGigPrice, navigate, location.state?.receiverName]);
 
   /* ── Load messages for active room ── */
   useEffect(() => {
@@ -262,31 +280,77 @@ useEffect(() => {
   return () => {
     socket.emit("leaveRoom", activeRoom.roomId);
   };
-
 }, [socket, activeRoom?.roomId]);
 
   /* ── Socket: listen for messages ── */
   useEffect(() => {
     if (!socket) return;
 
-socket.on("receiveMessage", (msg) => {
-  setMessages(prev => {
-    if (prev.some(m => m._id === msg._id)) return prev;
-    return [...prev, msg];
-  });
+    socket.on("receiveMessage", (msg) => {
+      setMessages(prev => {
+        if (prev.some(m => m._id === msg._id)) return prev;
+        return [...prev, msg];
+      });
 
-  setRooms(prev =>
-  prev.map(room =>
-    (room._id || room.roomId) === activeRoom?.roomId
-      ? { ...room, lastMessage: msg, unreadCount: 0 }
-      : {
-          ...room,
-          lastMessage: msg,
-          unreadCount: (room.unreadCount || 0) + 1
+      const isFromActiveRoom = msg.roomId === activeRoom?.roomId;
+      const receiverIdStr = msg.receiverId?._id?.toString() || msg.receiverId?.toString();
+      if (isFromActiveRoom && receiverIdStr === user?._id?.toString()) {
+        socket.emit("markSeen", { roomId: activeRoom.roomId });
+      }
+
+      setRooms(prev =>
+        prev.map(room => {
+          const isThisRoom = (room._id || room.roomId) === msg.roomId;
+          if (isThisRoom) {
+            const isCurrentActive = activeRoom?.roomId === msg.roomId;
+            return {
+              ...room,
+              lastMessage: msg,
+              unreadCount: isCurrentActive ? 0 : (room.unreadCount || 0) + 1
+            };
+          }
+          return room;
+        })
+      );
+    });
+
+    socket.on("newMessage", (msg) => {
+      const isFromActiveRoom = msg.roomId === activeRoom?.roomId;
+      
+      if (isFromActiveRoom) {
+        setMessages(prev => {
+          if (prev.some(m => m._id === msg._id)) return prev;
+          return [...prev, msg];
+        });
+        const receiverIdStr = msg.receiverId?._id?.toString() || msg.receiverId?.toString();
+        if (receiverIdStr === user?._id?.toString()) {
+          socket.emit("markSeen", { roomId: activeRoom.roomId });
         }
-  )
-);
-});
+      }
+
+      setRooms(prev => {
+        const roomExists = prev.some(room => (room._id || room.roomId) === msg.roomId);
+        if (!roomExists) {
+          api.get("/chat/rooms")
+            .then(r => setRooms(r.data))
+            .catch(() => {});
+          return prev;
+        }
+
+        return prev.map(room => {
+          const isThisRoom = (room._id || room.roomId) === msg.roomId;
+          if (isThisRoom) {
+            const isCurrentActive = activeRoom?.roomId === msg.roomId;
+            return {
+              ...room,
+              lastMessage: msg,
+              unreadCount: isCurrentActive ? 0 : (room.unreadCount || 0) + 1
+            };
+          }
+          return room;
+        });
+      });
+    });
 
     socket.on("offerUpdated", ({ messageId, status }) => {
       setMessages(prev =>
@@ -318,14 +382,31 @@ socket.on("receiveMessage", (msg) => {
       ));
     });
 
+    socket.on('messagesDelivered', ({ roomId, receiverId }) => {
+      if (roomId === activeRoom?.roomId) {
+        setMessages(prev => prev.map(m => 
+          (m.senderId?._id || m.senderId)?.toString() === user?._id?.toString() && m.status === "sent"
+            ? { ...m, status: "delivered" }
+            : m
+        ));
+      }
+      setRooms(prev => prev.map(r =>
+        (r._id || r.roomId) === roomId && r.lastMessage?.status === "sent"
+          ? { ...r, lastMessage: { ...r.lastMessage, status: "delivered" } }
+          : r
+      ));
+    });
+
     return () => {
       socket.off("receiveMessage");
+      socket.off("newMessage");
       socket.off("offerUpdated");
       socket.off("userTyping");
       socket.off("userStopTyping");
       socket.off("messagesSeen");
+      socket.off("messagesDelivered");
     };
-}, [socket, activeRoom?.roomId]);
+  }, [socket, activeRoom?.roomId, user?._id]);
 
 
   /* ── Send text message ── */
@@ -369,16 +450,27 @@ socket.on("receiveMessage", (msg) => {
   };
 
   /* ── Handle offer response ── */
-  const handleAcceptOffer = (messageId) => {
+  const handleAcceptOffer = async (messageId) => {
     if (!socket || !activeRoom) return;
     socket.emit("offerUpdate", {
       messageId,
       status: "accepted",
       roomId: activeRoom.roomId,
     });
-    // Also update via REST for persistence
-    api.put(`/chat/messages/${messageId}/offer`, { status: "accepted" });
-    showToast("Offer accepted! 🎉");
+    try {
+      const { data } = await api.put(`/chat/messages/${messageId}/offer`, { status: "accepted" });
+      showToast("Offer accepted! 🎉");
+      if (data.checkoutData) {
+        navigate("/checkout", {
+          state: {
+            gig: data.checkoutData.gig,
+            bid: data.checkoutData.bid,
+          }
+        });
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to accept offer.", "error");
+    }
   };
 
   const handleRejectOffer = (messageId) => {
@@ -453,7 +545,9 @@ socket.on("receiveMessage", (msg) => {
       receiverId: otherUserId,
       gigTitle: room.gig?.title,
       gigPrice: room.gig?.price,
+      otherUser: room.otherUser,  // ✅ Keep otherUser info
     });
+    navigate(`/chat/${roomId}`);
   };
 useEffect(() => {
   if (!user) navigate("/login");
@@ -463,10 +557,9 @@ useEffect(() => {
     <div className="chat-page">
 
       {/* ── Sidebar ── */}
-      <aside className="chat-sidebar">
+      <aside className={`chat-sidebar ${!activeRoom ? "show" : ""}`}>
         <div className="chat-sidebar-header">
           <h2>Messages</h2>
-          <span className="chat-count">{rooms.length}</span>
         </div>
 
         {rooms.length === 0 ? (
@@ -491,7 +584,7 @@ useEffect(() => {
       </aside>
 
       {/* ── Main chat area ── */}
-      <main className="chat-main">
+      <main className={`chat-main ${activeRoom ? "show" : ""}`}>
         {!activeRoom ? (
           <div className="chat-placeholder">
             <div className="chat-placeholder-icon">💬</div>
@@ -504,51 +597,12 @@ useEffect(() => {
             <div className="chat-header">
               <button className="chat-back-btn" onClick={() => setActiveRoom(null)}>←</button>
               <div className="chat-header-info">
-                <div className="chat-header-title">{activeRoom.gigTitle || "Chat"}</div>
+                <div className="chat-header-title">{otherUserName}</div>
                 <div className="chat-header-sub">
-                  {activeRoom.gigPrice ? `Budget: $${activeRoom.gigPrice}` : "Gig Chat"}
+                  {activeRoom.gigTitle ? `for: ${activeRoom.gigTitle}` : "Gig Chat"}
                 </div>
               </div>
-              <button
-                className="chat-offer-trigger"
-                onClick={() => setShowOffer(p => !p)}
-                title="Make an offer"
-              >
-                💰 Make Offer
-              </button>
             </div>
-
-            {/* Offer panel */}
-            {showOffer && (
-              <div className="offer-panel">
-                <div className="offer-panel-title">Send a Price Offer</div>
-                <div className="offer-panel-row">
-                  <div className="offer-input-wrap">
-                    <span className="offer-symbol">$</span>
-                    <input
-                      className="offer-price-input"
-                      type="number"
-                      placeholder="Your price"
-                      value={offerPrice}
-                      min="1"
-                      onChange={e => setOfferPrice(e.target.value)}
-                    />
-                  </div>
-                  <input
-                    className="offer-note-input"
-                    placeholder="Add a note (optional)"
-                    value={offerNote}
-                    onChange={e => setOfferNote(e.target.value)}
-                  />
-                  <button className="offer-send-btn" onClick={sendOffer}>
-                    Send Offer →
-                  </button>
-                  <button className="offer-cancel-btn" onClick={() => setShowOffer(false)}>
-                    ✕
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Messages */}
             <div className="chat-messages">

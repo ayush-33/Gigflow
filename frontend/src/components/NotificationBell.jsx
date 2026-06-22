@@ -4,7 +4,7 @@ import { useNotifications } from "../context/NotificationContext";
 import "../styles/Notifications.css";
 
 export default function NotificationBell() {
-  const { notifications, markAllRead } = useNotifications();
+  const { notifications, markAllRead, markOneAsRead } = useNotifications();
   const [isOpen, setIsOpen]     = useState(false);
   const dropdownRef = useRef(null);
   const navigate    = useNavigate();
@@ -22,9 +22,13 @@ export default function NotificationBell() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleToggle = () => {
+    setIsOpen(!isOpen);
+  };
+
   return (
     <div className="notification-bell-container" ref={dropdownRef}>
-      <button className="bell-btn" onClick={() => setIsOpen(!isOpen)}>
+      <button className="bell-btn" onClick={handleToggle}>
         <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" className="bell-icon"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
         <span className="bell-label-mobile">Notifications</span>
         {unread > 0 && <span className="bell-badge">{unread}</span>}
@@ -46,6 +50,7 @@ export default function NotificationBell() {
                   key={n._id} 
                   className={`notif-item ${(!n.read && !n.isRead) ? 'unread' : ''}`}
                   onClick={() => {
+                    if (!n.isRead && !n.read) markOneAsRead(n._id);
                     if (n.link) navigate(n.link);
                     setIsOpen(false);
                   }}

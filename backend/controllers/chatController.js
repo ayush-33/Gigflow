@@ -1,12 +1,13 @@
 import Message from "../models/message.js";
 import Gig from "../models/gig.js";
+import User from "../models/user.js";
 import mongoose from "mongoose";
 import { io } from "../server.js";
 
 /* ── Build roomId (deterministic, order-independent) ── */
 export const buildRoomId = (gigId, userA, userB) => {
   const sorted = [userA.toString(), userB.toString()].sort().join("_");
-  return `${gigId}_${sorted}`;
+  return sorted;
 };
 
 /* ---------- Get chat rooms for current user ---------- */
@@ -42,12 +43,17 @@ export const getMyChatRooms = async (req, res) => {
     const populated = await Promise.all(
       rooms.map(async (room) => {
         const gig = await Gig.findById(room.gigId).select("title price image").lean();
+        
+        // Find other user in the room
+        const otherUserId = room.senderId.toString() === req.userId.toString() ? room.receiverId : room.senderId;
+        const otherUser = await User.findById(otherUserId).select("name email").lean();
+
         const unreadCount = await Message.countDocuments({
           roomId: room._id,
           receiverId: req.userId,
-          status: { $ne: "read" }
+          isRead: false
         });
-        return { ...room, gig, unreadCount };
+        return { ...room, gig, unreadCount, otherUser };
       })
     );
 
@@ -63,19 +69,27 @@ export const getRoomMessages = async (req, res) => {
     const { roomId } = req.params;
 
     // Security: user must be part of this room
-    const first = await Message.findOne({ roomId });
-    if (first) {
-      const isParticipant =
-        first.senderId.toString()   === req.userId ||
-        first.receiverId.toString() === req.userId;
-      if (!isParticipant)
-        return res.status(403).json({ message: "Not authorized to view this chat" });
+    const parts = roomId.split("_");
+    let user1, user2;
+    if (parts.length === 3) {
+      user1 = parts[1];
+      user2 = parts[2];
+    } else if (parts.length === 2) {
+      user1 = parts[0];
+      user2 = parts[1];
+    } else {
+      return res.status(400).json({ message: "Invalid room ID" });
+    }
+
+    const isParticipant = user1 === req.userId || user2 === req.userId;
+    if (!isParticipant) {
+      return res.status(403).json({ message: "Not authorized to view this chat" });
     }
 
     // Mark messages in this room received by current user as read
     await Message.updateMany(
-      { roomId, receiverId: req.userId, status: { $ne: "read" } },
-      { $set: { status: "read" } }
+      { roomId, receiverId: req.userId, isRead: false },
+      { $set: { isRead: true, readAt: new Date(), status: "read" } }
     );
 
     // Notify room that messages have been read
@@ -118,7 +132,76 @@ export const updateOfferStatus = async (req, res) => {
     msg.offerStatus = status;
     await msg.save();
 
-    res.json(msg);
+    // Sync with the freelancer's Bid document
+    const gig = await Gig.findById(msg.gigId);
+    if (!gig) return res.status(404).json({ message: "Gig not found" });
+
+    const bidderId = gig.ownerId.toString() === msg.senderId.toString() ? msg.receiverId : msg.senderId;
+    const Bid = (await import("../models/bid.js")).default;
+    const bid = await Bid.findOne({ gigId: gig._id, bidderId });
+
+    if (bid) {
+      bid.price = msg.price;
+      if (status === "accepted") {
+        bid.status = "payment_pending";
+      } else {
+        bid.status = "rejected";
+      }
+      await bid.save();
+    }
+
+    // Create a persistent system message in conversation history
+    const sysMsg = await Message.create({
+      roomId: msg.roomId,
+      gigId: msg.gigId,
+      senderId: req.userId,
+      receiverId: msg.senderId,
+      type: "system",
+      message: status === "accepted"
+        ? `Offer of $${msg.price} was accepted.`
+        : `Offer of $${msg.price} was declined.`
+    });
+
+    if (io) {
+      const populatedSys = await sysMsg.populate("senderId", "name email");
+      io.to(msg.roomId).emit("receiveMessage", populatedSys);
+    }
+
+    // Notify the sender about the update using standard uppercase type enums
+    const { notifyUser } = await import("../utils/notifyUser.js");
+    await notifyUser({
+      senderId: req.userId,
+      receiverId: msg.senderId,
+      type: status === "accepted" ? "BID_ACCEPTED" : "BID_REJECTED",
+      title: status === "accepted" ? "Offer Accepted" : "Offer Declined",
+      message: status === "accepted"
+        ? `Your offer of $${msg.price} on "${gig.title}" has been accepted.`
+        : `Your offer of $${msg.price} on "${gig.title}" was declined.`,
+      link: "/profile"
+    });
+
+    if (status === "accepted" && bid && gig.ownerId.toString() === req.userId) {
+      const User = (await import("../models/user.js")).default;
+      const otherUser = await User.findById(msg.senderId);
+
+      const checkoutData = {
+        gig: {
+          _id:          gig._id,
+          title:        gig.title,
+          image:        gig.image,
+          price:        msg.price,
+          deliveryTime: gig.deliveryTime,
+          ownerId:      { name: otherUser?.name || 'Freelancer' }
+        },
+        bid: {
+          _id:   bid._id,
+          price: msg.price
+        }
+      };
+      return res.json({ msg, checkoutData });
+    }
+
+    res.json({ msg });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -129,7 +212,7 @@ export const getUnreadMessageCount = async (req, res) => {
   try {
     const count = await Message.countDocuments({
       receiverId: req.userId,
-      status: { $ne: "read" }
+      isRead: false
     });
     res.json({ unreadCount: count });
   } catch (err) {

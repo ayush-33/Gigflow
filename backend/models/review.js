@@ -16,6 +16,11 @@ const reviewSchema = new mongoose.Schema({
     ref: "User",
     required: true
   },
+  revieweeId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
+  },
   bidId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Bid",

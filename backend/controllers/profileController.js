@@ -42,7 +42,7 @@ export const getMyGigs = async (req, res) => {
 export const getMyBids = async (req, res) => {
   try {
     const bids = await Bid.find({ bidderId: req.userId })
-      .populate("gigId", "title price status")
+      .populate("gigId", "title price status ownerId")
       .sort({ createdAt: -1 });
     res.json(bids);
   } catch (err) {

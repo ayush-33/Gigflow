@@ -30,7 +30,12 @@ export function AuthProvider({ children }) {
 
         if (data?.accessToken) {
           setAccessToken(data.accessToken);
-          setUser(JSON.parse(savedUser));
+          if (data.user) {
+            setUser(data.user);
+            localStorage.setItem("user", JSON.stringify(data.user));
+          } else {
+            setUser(JSON.parse(savedUser));
+          }
           const s = connectSocket();
           setSocket(s);
         } else {

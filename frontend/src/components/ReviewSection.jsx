@@ -79,7 +79,7 @@ function ReviewCard({ review }) {
   );
 }
 
-function ReviewForm({ gigId, onSuccess }) {
+function ReviewForm({ gigId, isOwner, onSuccess }) {
   const [rating,     setRating]     = useState(0);
   const [comment,    setComment]    = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -116,7 +116,7 @@ function ReviewForm({ gigId, onSuccess }) {
       <div className="review-textarea-wrap">
         <textarea
           className="review-textarea"
-          placeholder="Share your experience working with this freelancer…"
+          placeholder={isOwner ? "Share your experience working with this freelancer…" : "Share your experience working with this client…"}
           value={comment}
           onChange={(e) => {
             setComment(e.target.value);
@@ -219,7 +219,7 @@ export default function ReviewSection({ gigId, isOwner, gigStatus, user }) {
 
       {/* Review form — only for gig owner after a bid is hired */}
       {canReview && !alreadyDone && (
-        <ReviewForm gigId={gigId} onSuccess={handleSuccess} />
+        <ReviewForm gigId={gigId} isOwner={isOwner} onSuccess={handleSuccess} />
       )}
 
       {/* Feedback banners */}

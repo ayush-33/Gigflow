@@ -40,6 +40,16 @@
   color: #ffffff;
 }
 
+.gig-status-badge.submitted {
+  background: rgba(139, 92, 246, 0.9);
+  color: #ffffff;
+}
+
+.gig-status-badge.completed {
+  background: rgba(16, 185, 129, 0.9);
+  color: #ffffff;
+}
+
 /* ── Add to Profile.css ── */
 
 /* Bid comparison section */
@@ -159,4 +169,61 @@
 .field-value.editable.input-error {
   border-color: #ef4444;
   background: #fff5f5;
+}
+
+/* ── TOUCH TARGETS & RESPONSIVENESS (320px to 430px) ── */
+@media (max-width: 430px) {
+  /* Enforce minimum 44px height for interactive elements */
+  .btn-action,
+  .sidebar ul li,
+  .chat-input-area button,
+  .chat-back-btn,
+  .section-card-action {
+    min-height: 44px;
+    padding: 10px 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Optimize layout spacing for compact mobile displays */
+  .dashboard-content {
+    padding: 12px !important;
+    gap: 16px !important;
+  }
+
+  .my-gigs-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .my-gig-card {
+    padding: 16px !important;
+  }
+
+  .bid-card {
+    padding: 16px !important;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .my-gig-card-new {
+    padding: 16px !important;
+  }
+
+  .bid-card-new {
+    padding: 16px !important;
+  }
+
+  .toolbar-btn {
+    min-height: 44px;
+    width: 100%;
+  }
+
+  .my-gig-card-meta-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
 }

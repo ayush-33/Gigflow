@@ -63,8 +63,8 @@ export const completeOrder = async (req, res) => {
       { $set: { status: 'rejected' } }
     );
 
-    // Update Gig status
-    gig.status = 'assigned';
+    // Update Gig status to hired
+    gig.status = 'hired';
     await gig.save();
 
     const orderRef = `GF-${Date.now().toString().slice(-8)}`;
@@ -82,31 +82,13 @@ export const completeOrder = async (req, res) => {
       orderRef,
     });
 
-    // Trigger notifications for freelancer
+    // Trigger notification for freelancer
     await notifyUser({
       senderId: req.userId,
       receiverId: bid.bidderId._id,
-      type: "PROJECT_AWARDED",
-      title: "Project Awarded",
-      message: `You have been awarded Project "${gig.title}".`,
-      link: "/profile"
-    });
-
-    await notifyUser({
-      senderId: req.userId,
-      receiverId: bid.bidderId._id,
-      type: "PAYMENT_RECEIVED",
-      title: "Payment Received",
-      message: `You received a payment for Project "${gig.title}".`,
-      link: "/profile"
-    });
-
-    await notifyUser({
-      senderId: req.userId,
-      receiverId: bid.bidderId._id,
-      type: "CONTRACT_STARTED",
-      title: "Contract Started",
-      message: `Contract started for Project "${gig.title}".`,
+      type: "GIG_HIRED",
+      title: "Gig Hired",
+      message: `You have been hired for "${gig.title}".`,
       link: "/profile"
     });
 
