@@ -30,6 +30,9 @@ const TYPE_META = {
   WORK_SUBMITTED: { icon: "📤", label: "Work Submitted", color: "system" },
   WORK_APPROVED: { icon: "✅", label: "Work Approved", color: "hired" },
   REVISIONS_REQUESTED: { icon: "🔄", label: "Revisions Requested", color: "rejected" },
+  REVISION_SUBMITTED: { icon: "📤", label: "Revision Submitted", color: "system" },
+  BID_WITHDRAWN: { icon: "🗑️", label: "Bid Withdrawn", color: "rejected" },
+  GIG_DELETED: { icon: "🗑️", label: "Gig Deleted", color: "rejected" },
   
   default:     { icon: "🔔", label: "Update",    color: "system"   },
 };
@@ -56,6 +59,38 @@ function relTime(dateStr) {
   const d = Math.floor(h / 24);
   if (d < 7)     return `${d}d ago`;
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+/* ── Group Notifications ── */
+function groupNotifications(notifs) {
+  const groups = {
+    today: [],
+    yesterday: [],
+    earlier: []
+  };
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+
+  notifs.forEach(n => {
+    const d = new Date(n.createdAt);
+    if (d >= todayStart) {
+      groups.today.push(n);
+    } else if (d >= yesterdayStart) {
+      groups.yesterday.push(n);
+    } else {
+      groups.earlier.push(n);
+    }
+  });
+
+  return [
+    { title: "Today", items: groups.today },
+    { title: "Yesterday", items: groups.yesterday },
+    { title: "Earlier", items: groups.earlier }
+  ].filter(g => g.items.length > 0);
 }
 
 
@@ -144,7 +179,7 @@ const { notifications, markOneAsRead, markAllRead, fetchNotifications } = useNot
   const filtered = notifications.filter((n) => {
     if (filter === "unread" && n.isRead) return false;
     if (filter === "bidAccepted") {
-      if (!["bidAccepted", "BID_ACCEPTED", "bid_accepted", "PROJECT_AWARDED", "PROJECT_COMPLETED"].includes(n.type)) return false;
+      if (!["bidAccepted", "BID_ACCEPTED", "bid_accepted", "PROJECT_AWARDED", "PROJECT_COMPLETED", "GIG_HIRED"].includes(n.type)) return false;
     } else if (filter === "bidRejected") {
       if (!["bidRejected", "BID_REJECTED", "bid_rejected"].includes(n.type)) return false;
     } else if (filter === "message") {
@@ -161,7 +196,7 @@ const { notifications, markOneAsRead, markAllRead, fetchNotifications } = useNot
   const counts = {
     all:         notifications.length,
     unread:      notifications.filter((n) => !n.isRead).length,
-    bidAccepted: notifications.filter((n) => ["bidAccepted", "BID_ACCEPTED", "bid_accepted", "PROJECT_AWARDED", "PROJECT_COMPLETED"].includes(n.type)).length,
+    bidAccepted: notifications.filter((n) => ["bidAccepted", "BID_ACCEPTED", "bid_accepted", "PROJECT_AWARDED", "PROJECT_COMPLETED", "GIG_HIRED"].includes(n.type)).length,
     bidRejected: notifications.filter((n) => ["bidRejected", "BID_REJECTED", "bid_rejected"].includes(n.type)).length,
     message:     notifications.filter((n) => ["message", "NEW_MESSAGE"].includes(n.type)).length,
   };
@@ -269,87 +304,102 @@ const { notifications, markOneAsRead, markAllRead, fetchNotifications } = useNot
             )}
           </div>
         ) : (
-          <div className="notif-list">
-            {filtered.map((n, i) => {
-              const meta = getMeta(n.type);
-              return (
-                <div
-                  key={n._id}
-                  className={`notif-card${!n.isRead ? " unread" : ""}${removing.has(n._id) ? " removing" : ""}`}
-                  style={{ animationDelay: `${i * 0.04}s` }}
-                  onClick={() => {
-                    if (!n.isRead) markOneAsRead(n._id);
-                    if (n.link) navigate(n.link);
-                  }}
-                >
-                  <div className={`notif-icon-wrap ${meta.color}`}>
-                    {meta.icon}
+          <div className="notif-list-container">
+            {(() => {
+              let globalIndex = 0;
+              return groupNotifications(filtered).map((group) => (
+                <div key={group.title} className="notif-group-section">
+                  <div className="notif-group-header">
+                    <span className="notif-group-title">{group.title}</span>
+                    <div className="notif-group-line" />
                   </div>
-
-                  <div className="notif-body">
-                    <div className="notif-top">
-                      <div className="notif-message">{n.message}</div>
-                      <div className="notif-time">{relTime(n.createdAt)}</div>
-                    </div>
-                    {n.type === "REVISIONS_REQUESTED" && n.meta?.notes && (
-                      <div className="notif-revision-notes" style={{
-                        marginTop: "8px",
-                        padding: "10px 12px",
-                        background: "rgba(239, 68, 68, 0.08)",
-                        borderLeft: "3px solid #ef4444",
-                        borderRadius: "4px",
-                        fontSize: "13px",
-                        color: "#f87171",
-                        lineHeight: "1.5"
-                      }}>
-                        <strong style={{ color: "#ef4444", marginRight: "4px" }}>Revision Notes:</strong>
-                        {n.meta.notes}
-                      </div>
-                    )}
-                    <div className="notif-actions">
-                      <span className={`notif-tag tag-${meta.color}`}>{meta.label}</span>
-                      {n.link && (
-                        <button
-                          className="notif-action-btn primary"
-                          onClick={(e) => {
-                            e.stopPropagation();
+                  <div className="notif-list">
+                    {group.items.map((n) => {
+                      const meta = getMeta(n.type);
+                      const delayIndex = globalIndex++;
+                      return (
+                        <div
+                          key={n._id}
+                          className={`notif-card${!n.isRead ? " unread" : ""}${removing.has(n._id) ? " removing" : ""}`}
+                          style={{ animationDelay: `${delayIndex * 0.04}s` }}
+                          onClick={() => {
                             if (!n.isRead) markOneAsRead(n._id);
-                            navigate(n.link);
+                            if (n.link) navigate(n.link);
                           }}
                         >
-                          View →
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                          <div className={`notif-icon-wrap ${meta.color}`}>
+                            {meta.icon}
+                          </div>
 
-                  <div className="notif-right">
-                    {!n.isRead && (
-                      <>
-                        <div className="unread-dot" />
-                        <div
-                          className="mark-read-ico"
-                          title="Mark as read"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            markOneAsRead(n._id);
-                            showToast("Marked as read");
-                          }}
-                        >✓</div>
-                      </>
-                    )}
-                    <div
-                      className="delete-ico"
-                      title="Delete"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteNotif(n._id);
-                      }}
-                    >✕</div>
+                          <div className="notif-content-flow">
+                            <div className="notif-title-row">
+                              <div className="notif-title-badge-group">
+                                {!n.isRead && <span className="notif-unread-indicator" title="Unread" />}
+                                <h4 className="notif-title">{n.title || meta.label}</h4>
+                              </div>
+                            </div>
+                            
+                            <div className="notif-description-row">
+                              <p className="notif-description">{n.message || n.body}</p>
+                            </div>
+                            
+                            {n.type === "REVISIONS_REQUESTED" && n.meta?.notes && (
+                              <div className="notif-revision-notes">
+                                <strong style={{ color: "#ef4444", marginRight: "4px" }}>Revision Notes:</strong>
+                                {n.meta.notes}
+                              </div>
+                            )}
+
+                            <div className="notif-footer-row">
+                              <span className={`notif-tag tag-${meta.color}`}>{meta.label}</span>
+                              <span className="notif-dot-separator">•</span>
+                              <span className="notif-time">{relTime(n.createdAt)}</span>
+                              {n.link && (
+                                <>
+                                  <span className="notif-dot-separator">•</span>
+                                  <button
+                                    className="notif-action-link"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (!n.isRead) markOneAsRead(n._id);
+                                      navigate(n.link);
+                                    }}
+                                  >
+                                    View Details
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="notif-actions-sidebar">
+                            {!n.isRead && (
+                              <button
+                                className="notif-control-btn mark-read"
+                                title="Mark as read"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  markOneAsRead(n._id);
+                                  showToast("Marked as read");
+                                }}
+                              >✓</button>
+                            )}
+                            <button
+                              className="notif-control-btn delete"
+                              title="Delete"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteNotif(n._id);
+                              }}
+                            >✕</button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              );
-            })}
+              ));
+            })()}
           </div>
         )}
       </div>

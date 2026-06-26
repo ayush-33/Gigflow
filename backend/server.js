@@ -35,7 +35,7 @@ const app = express();
 const httpServer = createServer(app);
 
 export const io = new Server(httpServer, {
-  cors: { origin: "http://localhost:5173", credentials: true }
+  cors: { origin: ["http://localhost:5173", "http://localhost:5174"], credentials: true }
 });
 
 /* ─────────────────────────
@@ -215,6 +215,11 @@ io.on("connection", (socket) => {
         try {
           const senderName = populated.senderId?.name || "Someone";
           const { notifyUser } = await import("./utils/notifyUser.js");
+          const Gig = (await import("./models/gig.js")).default;
+          const gig = await Gig.findById(gigId);
+          const isOwner = gig && gig.ownerId.toString() === receiverId.toString();
+          const role = isOwner ? "client" : "freelancer";
+
           await notifyUser({
             senderId: socket.userId,
             receiverId,
@@ -222,7 +227,7 @@ io.on("connection", (socket) => {
             title: "Counter Offer Received",
             message: `${senderName} proposed a price offer of $${price}`,
             link: "/profile",
-            meta: { roomId, gigId },
+            meta: { roomId, gigId, role },
           });
         } catch (e) {
           console.error("Notification error:", e.message);
@@ -286,7 +291,7 @@ io.on("connection", (socket) => {
 /* ─────────────────────────
    🌐 MIDDLEWARE
 ───────────────────────── */
-app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+app.use(cors({ origin: ["http://localhost:5173", "http://localhost:5174"], credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

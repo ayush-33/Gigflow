@@ -29,11 +29,16 @@ export const markAsRead = async (req, res) => {
 /* ---------- Mark All As Read ---------- */
 export const markAllAsRead = async (req, res) => {
   try {
+    const { role } = req.query;
+    const filter = { userId: req.userId, isRead: false };
+    if (role) {
+      filter["meta.role"] = role;
+    }
     await Notification.updateMany(
-      { userId: req.userId, isRead: false },
+      filter,
       { isRead: true, read: true }
     );
-    res.status(200).json({ message: "All notifications marked as read" });
+    res.status(200).json({ message: "Notifications marked as read" });
   } catch (error) {
     res.status(500).json({ message: "Error updating notifications" });
   }

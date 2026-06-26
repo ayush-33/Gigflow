@@ -1866,6 +1866,35 @@ tbody tr:hover {
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
+.premium-empty-state.compact {
+  padding: 32px 24px;
+}
+
+.premium-empty-state.compact .empty-state-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 12px;
+}
+
+.premium-empty-state.compact .empty-state-icon {
+  font-size: 24px;
+}
+
+.premium-empty-state.compact .empty-state-title {
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.premium-empty-state.compact .empty-state-description {
+  font-size: 12.5px;
+  margin-bottom: 0;
+  max-width: 320px;
+}
+
+.recent-activity-card .premium-empty-state {
+  flex-grow: 1;
+}
+
 .empty-state-icon-wrapper {
   width: 80px;
   height: 80px;
@@ -2058,8 +2087,8 @@ tbody tr:hover {
 .stats-subgrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  padding: 24px;
+  gap: 12px;
+  padding: 12px;
   flex-grow: 1;
 }
 
@@ -2067,10 +2096,10 @@ tbody tr:hover {
   background: rgba(255, 255, 255, 0.01);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 10px 12px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 8px;
   transition: all 0.2s var(--ease);
 }
 
@@ -2080,9 +2109,9 @@ tbody tr:hover {
 }
 
 .subcard-icon {
-  font-size: 18px;
-  width: 38px;
-  height: 38px;
+  font-size: 14px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
@@ -2090,10 +2119,25 @@ tbody tr:hover {
   flex-shrink: 0;
 }
 
-.subcard-icon.text-pending { color: var(--accent); background: rgba(245, 158, 11, 0.1); }
-.subcard-icon.text-success { color: var(--success); background: rgba(16, 185, 129, 0.1); }
-.subcard-icon.text-danger { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
-.subcard-icon.text-muted { color: var(--text-muted); background: rgba(255, 255, 255, 0.05); }
+.subcard-icon.text-pending {
+  color: var(--accent);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.subcard-icon.text-success {
+  color: var(--success);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.subcard-icon.text-danger {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.subcard-icon.text-muted {
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+}
 
 .subcard-content {
   display: flex;
@@ -2102,13 +2146,13 @@ tbody tr:hover {
 }
 
 .subcard-val {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--text-primary);
 }
 
 .subcard-label {
-  font-size: 12px;
+  font-size: 10.5px;
   color: var(--text-muted);
   font-weight: 600;
 }
@@ -2198,7 +2242,7 @@ tbody tr:hover {
 .recent-items-card {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: auto;
 }
 
 .recent-items-list {
@@ -2267,11 +2311,13 @@ tbody tr:hover {
   gap: 2px;
   max-width: 100%;
   overflow-x: auto;
-  scrollbar-width: none; /* Hide standard scrollbar */
+  scrollbar-width: none;
+  /* Hide standard scrollbar */
 }
 
 .segmented-filters::-webkit-scrollbar {
-  display: none; /* Hide WebKit scrollbar */
+  display: none;
+  /* Hide WebKit scrollbar */
 }
 
 .filter-btn {
@@ -2323,7 +2369,8 @@ tbody tr:hover {
   height: 100%;
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(10px);
-  min-width: 0; /* Prevents flex children from stretching parent */
+  min-width: 0;
+  /* Prevents flex children from stretching parent */
 }
 
 .premium-dashboard-card:hover {
@@ -2489,18 +2536,39 @@ tbody tr:hover {
   margin-top: auto;
 }
 
+@media (min-width: 769px) {
+  .card-footer-section {
+    min-height: 115px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+}
+
 .card-actions-group {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   width: 100%;
 }
 
-.card-actions-group.cols-3 {
-  grid-template-columns: repeat(3, 1fr);
+.card-actions-group .toolbar-btn,
+.card-actions-group .toolbar-label-status {
+  flex: 1 1 120px;
+  min-width: 110px;
+  height: 42px;
 }
 
-.card-actions-group.cols-4 {
-  grid-template-columns: repeat(2, 1fr);
+@media (min-width: 769px) {
+  .card-actions-group.cols-2 .toolbar-btn {
+    flex: 1 1 calc(50% - 10px);
+  }
+  .card-actions-group.cols-3 .toolbar-btn {
+    flex: 1 1 calc(33.333% - 10px);
+  }
+  .card-actions-group.cols-4 .toolbar-btn {
+    flex: 1 1 calc(50% - 10px);
+  }
 }
 
 .toolbar-btn {
@@ -2508,16 +2576,18 @@ tbody tr:hover {
   height: 42px;
   border-radius: var(--radius-md);
   font-family: var(--font);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s var(--ease);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.2;
   border: none;
-  padding: 0 12px;
+  padding: 4px 8px;
 }
 
 .toolbar-btn.btn-primary {
@@ -3098,8 +3168,8 @@ tbody tr:hover {
 .stats-subgrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  padding: 20px;
+  gap: 12px;
+  padding: 12px;
   flex-grow: 1;
   align-content: stretch;
 }
@@ -3108,13 +3178,13 @@ tbody tr:hover {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 10px;
+  gap: 6px;
   transition: all 0.25s var(--spring);
   position: relative;
   overflow: hidden;
@@ -3127,7 +3197,7 @@ tbody tr:hover {
 }
 
 .subcard-icon {
-  font-size: 28px;
+  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3141,18 +3211,18 @@ tbody tr:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
 }
 
 .subcard-val {
-  font-size: 32px;
+  font-size: 22px;
   font-weight: 800;
   color: var(--text-primary);
   line-height: 1.1;
 }
 
 .subcard-label {
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -3163,6 +3233,7 @@ tbody tr:hover {
   border: 1px solid rgba(245, 158, 11, 0.15);
   border-top: 4px solid var(--warning);
 }
+
 .stat-subcard.pending:hover {
   background: linear-gradient(135deg, rgba(245, 158, 11, 0.04) 0%, rgba(245, 158, 11, 0.1) 100%);
   border-color: rgba(245, 158, 11, 0.35);
@@ -3174,6 +3245,7 @@ tbody tr:hover {
   border: 1px solid rgba(16, 185, 129, 0.15);
   border-top: 4px solid var(--success);
 }
+
 .stat-subcard.accepted:hover {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.04) 0%, rgba(16, 185, 129, 0.1) 100%);
   border-color: rgba(16, 185, 129, 0.35);
@@ -3185,6 +3257,7 @@ tbody tr:hover {
   border: 1px solid rgba(239, 68, 68, 0.15);
   border-top: 4px solid var(--danger);
 }
+
 .stat-subcard.rejected:hover {
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.04) 0%, rgba(239, 68, 68, 0.1) 100%);
   border-color: rgba(239, 68, 68, 0.35);
@@ -3196,6 +3269,7 @@ tbody tr:hover {
   border: 1px solid rgba(148, 163, 184, 0.15);
   border-top: 4px solid var(--text-muted);
 }
+
 .stat-subcard.withdrawn:hover {
   background: linear-gradient(135deg, rgba(148, 163, 184, 0.04) 0%, rgba(148, 163, 184, 0.1) 100%);
   border-color: rgba(148, 163, 184, 0.35);
@@ -3253,7 +3327,8 @@ tbody tr:hover {
   }
 
   .sidebar::-webkit-scrollbar {
-    display: none; /* Hide scrollbar for a clean touch experience */
+    display: none;
+    /* Hide scrollbar for a clean touch experience */
   }
 
   .sidebar-logo {
@@ -3306,19 +3381,20 @@ tbody tr:hover {
 
   /* Strict Equal-Height Buttons vertical stack on Mobile */
   .card-actions-group {
-    grid-template-columns: 1fr !important;
+    display: flex !important;
+    flex-direction: column !important;
     width: 100%;
     gap: 8px;
   }
 
   .toolbar-btn {
     width: 100%;
-    flex: none; /* De-flex to expand full width vertically */
+    flex: 1 1 100% !important;
   }
 
   .toolbar-label-status.flex-grow-label {
     width: 100%;
-    flex: none;
+    flex: 1 1 100% !important;
   }
 
   /* Header adjustments */
@@ -3376,7 +3452,8 @@ tbody tr:hover {
   }
 
   .action-alert-sub {
-    white-space: normal; /* allow wrap if very small */
+    white-space: normal;
+    /* allow wrap if very small */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -3460,4 +3537,4 @@ tbody tr:hover {
   .premium-dashboard-card {
     padding: 16px;
   }
-}
+}

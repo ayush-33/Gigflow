@@ -57,7 +57,7 @@ export function NotificationProvider({ children }) {
 
     const handleNotification = (newNotif) => {
       setNotifications((prev) => [newNotif, ...prev]);
-      showToast(newNotif.message || newNotif.body || "New notification!", "info");
+      showToast(newNotif.message || newNotif.body || "New notification!", "notification");
     };
 
     const handleNewMessage = (msg) => {
@@ -104,10 +104,14 @@ export function NotificationProvider({ children }) {
     } catch { /* silent */ }
   };
 
-  const markAllRead = async () => {
+  const markAllRead = async (role) => {
     try {
-      await api.put("/notifications/mark-all-read");
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true, read: true })));
+      const actualRole = (typeof role === "string") ? role : undefined;
+      const url = actualRole ? `/notifications/mark-all-read?role=${actualRole}` : "/notifications/mark-all-read";
+      await api.put(url);
+      setNotifications((prev) =>
+        prev.map((n) => (actualRole ? n.meta?.role === actualRole : true) ? { ...n, isRead: true, read: true } : n)
+      );
     } catch { /* silent */ }
   };
 

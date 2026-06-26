@@ -20,10 +20,10 @@ export const updateProfile = async (req, res) => {
       return res.status(400).json({ message: "Name must be at least 2 characters." });
 
     const updated = await User.findByIdAndUpdate(
-  req.userId,
-  { name: name.trim(), bio: bio?.trim() || "", phone: phone?.trim() || "" },
-  { new: true }
-).select("-password");
+      req.userId,
+      { name: name.trim(), bio: bio?.trim() || "", phone: phone?.trim() || "" },
+      { new: true }
+    ).select("-password");
     res.json(updated);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -56,7 +56,7 @@ export const getBidsOnMyGigs = async (req, res) => {
     const gigs = await Gig.find({ ownerId: req.userId }).select("_id");
     const gigIds = gigs.map((g) => g._id);
 
-    const bids = await Bid.find({ gigId: { $in: gigIds } })
+    const bids = await Bid.find({ gigId: { $in: gigIds }, status: { $ne: "withdrawn" } })
       .populate("bidderId", "name email")
       .populate("gigId", "title price deliveryTime image")
       .sort({ createdAt: -1 });
@@ -71,13 +71,17 @@ export const getProfileStats = async (req, res) => {
   try {
     const gigsPosted = await Gig.countDocuments({ ownerId: req.userId });
     const bidsPlaced = await Bid.countDocuments({ bidderId: req.userId });
-    const pendingBids = await Bid.countDocuments({ bidderId: req.userId, status: "pending" });
-    const acceptedBids = await Bid.countDocuments({ bidderId: req.userId, status: { $in: ["payment_pending", "hired"] } });
+    const pendingBids = await Bid.countDocuments({ bidderId: req.userId, status: { $in: ["pending", "countered"] } });
+    const acceptedBids = await Bid.countDocuments({ bidderId: req.userId, status: { $in: ["payment_pending", "hired", "in_progress", "submitted", "completed"] } });
     const rejectedBids = await Bid.countDocuments({ bidderId: req.userId, status: "rejected" });
     const withdrawnBids = await Bid.countDocuments({ bidderId: req.userId, status: "withdrawn" });
-    const hiresWon   = await Bid.countDocuments({ bidderId: req.userId, status: "hired" });
+    const hiresWon = await Bid.countDocuments({ bidderId: req.userId, status: { $in: ["hired", "in_progress", "submitted", "completed"] } });
 
-    res.json({ gigsPosted, bidsPlaced, pendingBids, acceptedBids, rejectedBids, withdrawnBids, hiresWon });
+    const myGigs = await Gig.find({ ownerId: req.userId }).select("_id");
+    const myGigIds = myGigs.map((g) => g._id);
+    const offersReceived = await Bid.countDocuments({ gigId: { $in: myGigIds }, status: { $ne: "withdrawn" } });
+
+    res.json({ gigsPosted, bidsPlaced, pendingBids, acceptedBids, rejectedBids, withdrawnBids, hiresWon, offersReceived });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

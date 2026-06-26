@@ -13,6 +13,7 @@ import { protect } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 router.post("/",                    protect, createBid);
+router.get("/",                     protect, (req, res) => res.status(400).json({ message: "Gig ID is required" }));
 router.get("/check/:gigId",         protect, checkUserBid);   // must be before /:gigId
 router.get("/:gigId",               protect, getBidsByGig);
 

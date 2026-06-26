@@ -1,6 +1,7 @@
 import Order from '../models/Order.js';
 import Bid from '../models/bid.js';
 import Gig from '../models/gig.js';
+import Notification from '../models/notificationModel.js';
 import { io } from '../server.js';
 import { notifyUser } from '../utils/notifyUser.js';
 
@@ -89,8 +90,21 @@ export const completeOrder = async (req, res) => {
       type: "GIG_HIRED",
       title: "Gig Hired",
       message: `You have been hired for "${gig.title}".`,
-      link: "/profile"
+      link: "/profile",
+      meta: { role: "freelancer", bidId: bid._id, gigId: gig._id }
     });
+
+    // Mark the BID_ACCEPTED notification as read since action is completed
+    await Notification.updateMany(
+      {
+        receiverId: req.userId,
+        type: "BID_ACCEPTED",
+        isRead: false
+      },
+      {
+        $set: { isRead: true, read: true }
+      }
+    );
 
     if (io) {
       io.to(bid.bidderId._id.toString()).emit('bidHired', {

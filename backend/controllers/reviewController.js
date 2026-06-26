@@ -62,7 +62,8 @@ export const createReview = async (req, res) => {
       type: "PROJECT_COMPLETED",
       title: "New Review Received",
       message: `You received a ${rating}-star review on "${gig.title}".`,
-      link: "/profile"
+      link: "/profile",
+      meta: { role: isOwner ? "freelancer" : "client", gigId, bidId: bid._id }
     });
 
     if (isOwner) {

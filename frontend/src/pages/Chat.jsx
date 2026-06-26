@@ -234,15 +234,17 @@ export default function Chat() {
 // ── Open room from URL ──
 useEffect(() => {
   if (!urlRoomId || rooms.length === 0) return;
+  if (activeRoom?.roomId === urlRoomId) return;
   // room._id from aggregation IS the roomId string
   const room = rooms.find(r => r._id === urlRoomId);
   if (room) openRoomFromList(room);
-}, [urlRoomId, rooms]);
+}, [urlRoomId, rooms, activeRoom?.roomId]);
 
   /* ── If opened from GigDetails, auto-set active room ── */
   useEffect(() => {
     if (!initGigId || !initReceiverId || !user) return;
     const rId = buildRoomId(initGigId, user._id, initReceiverId);
+    if (activeRoom?.roomId === rId) return;
     setActiveRoom({
       roomId:      rId,
       gigId:       initGigId,
@@ -251,8 +253,8 @@ useEffect(() => {
       gigPrice:    initGigPrice,
       otherUser:   { name: location.state?.receiverName || "User" }
     });
-    navigate(`/chat/${rId}`, { replace: true });
-  }, [initGigId, initReceiverId, user, initGigTitle, initGigPrice, navigate, location.state?.receiverName]);
+    navigate(`/chat/${rId}`, { replace: true, state: null });
+  }, [initGigId, initReceiverId, user, initGigTitle, initGigPrice, navigate, location.state?.receiverName, activeRoom?.roomId]);
 
   /* ── Load messages for active room ── */
   useEffect(() => {

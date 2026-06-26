@@ -36,6 +36,8 @@ const notificationSchema = new mongoose.Schema(
       "WORK_SUBMITTED",
       "WORK_APPROVED",
       "REVISIONS_REQUESTED",
+      "REVISION_SUBMITTED",
+      "BID_WITHDRAWN",
       // Legacy/lowercase aliases (kept for backward-compat)
       "message",
       "offer",

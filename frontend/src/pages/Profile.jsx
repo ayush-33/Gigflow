@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, Fragment } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useNotifications } from "../context/NotificationContext";
 import { useAuth } from "../context/AuthContext";
 import ConfirmModal from "../components/ConfirmModal";
@@ -121,6 +121,9 @@ const mapNotificationToActivity = (notif) => {
     WORK_SUBMITTED: { icon: "📤", title: "Work Submitted" },
     WORK_APPROVED: { icon: "✅", title: "Work Approved" },
     REVISIONS_REQUESTED: { icon: "🔄", title: "Revision Requested" },
+    REVISION_SUBMITTED: { icon: "📤", title: "Revision Submitted" },
+    BID_WITHDRAWN: { icon: "🗑️", title: "Bid Withdrawn" },
+    GIG_DELETED: { icon: "🗑️", title: "Gig Deleted" },
 
     default: { icon: "🔔", title: "Account Update" }
   };
@@ -136,9 +139,9 @@ const mapNotificationToActivity = (notif) => {
 };
 
 /* ── Empty state ── */
-function EmptyState({ icon, title, sub, actionText, onActionClick }) {
+function EmptyState({ icon, title, sub, actionText, onActionClick, compact }) {
   return (
-    <div className="premium-empty-state">
+    <div className={`premium-empty-state${compact ? " compact" : ""}`}>
       <div className="empty-state-icon-wrapper">
         <span className="empty-state-icon">{icon}</span>
       </div>
@@ -310,7 +313,7 @@ export default function Profile() {
   const navigate = useNavigate();
 
   // ✅ FIX: context exports fetchNotifications, not refreshNotifications
-  const { fetchNotifications, unreadMessages, notifications } = useNotifications();
+  const { fetchNotifications, unreadMessages, notifications, markAllRead } = useNotifications();
   const { user, setUser, socket } = useAuth();
   const unreadNotifications = notifications.filter(n => !n.isRead).length;
 
@@ -319,7 +322,11 @@ export default function Profile() {
   const [bids, setBids] = useState([]);
   const [receivedBids, setReceivedBids] = useState([]);
   const [stats, setStats] = useState({});
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "dashboard";
+  const setActiveTab = useCallback((tab) => {
+    setSearchParams({ tab });
+  }, [setSearchParams]);
   const [modal, setModal] = useState(null);
   const [showComparison, setShowComparison] = useState(false);
   const [counterBidId, setCounterBidId] = useState(null);
@@ -344,6 +351,9 @@ export default function Profile() {
 
   const pendingOffers = receivedBids.filter((b) => b.status === "pending" || (b.status === "countered" && b.lastOfferBy !== (user?._id || profile?._id))).length;
   const pendingBids = bids.filter((b) => b.status === "pending" || (b.status === "countered" && b.lastOfferBy !== (user?._id || profile?._id))).length;
+
+  const bidsUnreadCount = notifications.filter(n => !n.isRead && n.meta?.role === "freelancer").length;
+  const offersUnreadCount = notifications.filter(n => !n.isRead && n.meta?.role === "client").length;
 
   // Parts 4/5/6: Dashboard action indicators
   const counterOffersReceived = bids.filter(b => b.status === "countered" && b.lastOfferBy !== (user?._id || profile?._id)).length;
@@ -417,9 +427,26 @@ export default function Profile() {
 
   useEffect(() => {
     if (location.state?.tab) {
-      setActiveTab(location.state.tab);
+      const tab = location.state.tab;
+      navigate(location.pathname + location.search, { replace: true, state: {} });
+      setActiveTab(tab);
     }
-  }, [location.state]);
+  }, [location.state, navigate, location.pathname, location.search, setActiveTab]);
+
+  // Clear unread badges when visiting relevant tabs
+  useEffect(() => {
+    if (activeTab === "offers") {
+      const hasUnread = notifications.some(n => !n.isRead && n.meta?.role === "client");
+      if (hasUnread) {
+        markAllRead("client");
+      }
+    } else if (activeTab === "bids") {
+      const hasUnread = notifications.some(n => !n.isRead && n.meta?.role === "freelancer");
+      if (hasUnread) {
+        markAllRead("freelancer");
+      }
+    }
+  }, [activeTab, notifications, markAllRead]);
 
   /* ── Generic action — uses api, no manual headers ── */
   const doAction = async (endpoint, method = "put", successMsg) => {
@@ -644,14 +671,11 @@ export default function Profile() {
             >
               <span className="sidebar-icon">{item.icon}</span>
               {item.label}
-              {item.key === "gigs" && gigs.filter(g => g.status === "submitted").length > 0 && (
-                <span className="sidebar-badge">{gigs.filter(g => g.status === "submitted").length}</span>
+              {item.key === "bids" && bidsUnreadCount > 0 && (
+                <span className="sidebar-badge">{bidsUnreadCount}</span>
               )}
-              {item.key === "bids" && (counterOffersReceived + bids.filter(b => b.status === "in_progress" && b.revisionNotes).length) > 0 && (
-                <span className="sidebar-badge">{counterOffersReceived + bids.filter(b => b.status === "in_progress" && b.revisionNotes).length}</span>
-              )}
-              {item.key === "offers" && receivedBids.filter(b => b.status === "pending").length > 0 && (
-                <span className="sidebar-badge">{receivedBids.filter(b => b.status === "pending").length}</span>
+              {item.key === "offers" && offersUnreadCount > 0 && (
+                <span className="sidebar-badge">{offersUnreadCount}</span>
               )}
               {item.key === "messages" && unreadMessages > 0 && (
                 <span className="sidebar-badge">{unreadMessages}</span>
@@ -731,9 +755,9 @@ export default function Profile() {
                   <div className="stat-body">
                     <div className="stat-number" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       {stats.bidsPlaced ?? bids.length}
-                      {pendingBids > 0 && (
+                      {bidsUnreadCount > 0 && (
                         <span className="sidebar-badge" style={{ fontSize: '10px', padding: '2px 6px', height: 'auto', minWidth: 'auto', margin: 0 }}>
-                          {pendingBids}
+                          {bidsUnreadCount}
                         </span>
                       )}
                     </div>
@@ -744,10 +768,10 @@ export default function Profile() {
                   <div className="stat-icon-box blue">📥</div>
                   <div className="stat-body">
                     <div className="stat-number" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {receivedBids.length}
-                      {pendingOffers > 0 && (
+                      {stats.offersReceived ?? receivedBids.length}
+                      {offersUnreadCount > 0 && (
                         <span className="sidebar-badge" style={{ fontSize: '10px', padding: '2px 6px', height: 'auto', minWidth: 'auto', margin: 0 }}>
-                          {pendingOffers}
+                          {offersUnreadCount}
                         </span>
                       )}
                     </div>
@@ -768,6 +792,7 @@ export default function Profile() {
                       icon="📋"
                       title="No Recent Activity"
                       sub="Your recent account activity will appear here."
+                      compact={true}
                     />
                   ) : (
                     <>
@@ -839,12 +864,14 @@ export default function Profile() {
               <div className="section-card recent-items-card">
                 <div className="section-card-header">
                   <div className="section-card-title">📦 Recent Gigs</div>
-                  <button className="section-card-action" onClick={() => setActiveTab("gigs")}>
-                    View all
-                  </button>
+                  {gigs.length > 2 && (
+                    <button className="section-card-action" onClick={() => setActiveTab("gigs")}>
+                      View all
+                    </button>
+                  )}
                 </div>
                 {gigs.length === 0 ? (
-                  <EmptyState icon="📭" title="No gigs yet" sub="Post your first gig to start receiving offers." />
+                  <EmptyState icon="📭" title="No gigs yet" sub="Post your first gig to start receiving offers." compact={true} />
                 ) : (
                   <div className="recent-items-list">
                     {gigs.slice(0, 2).map((gig) => (
@@ -864,12 +891,14 @@ export default function Profile() {
               <div className="section-card recent-items-card">
                 <div className="section-card-header">
                   <div className="section-card-title">💬 Recent Bids</div>
-                  <button className="section-card-action" onClick={() => setActiveTab("bids")}>
-                    View all
-                  </button>
+                  {bids.length > 2 && (
+                    <button className="section-card-action" onClick={() => setActiveTab("bids")}>
+                      View all
+                    </button>
+                  )}
                 </div>
                 {bids.length === 0 ? (
-                  <EmptyState icon="📭" title="No bids placed" sub="Browse gigs and place your first bid." />
+                  <EmptyState icon="📭" title="No bids placed" sub="Browse gigs and place your first bid." compact={true} />
                 ) : (
                   <div className="recent-items-list">
                     {bids.slice(0, 2).map((bid) => (

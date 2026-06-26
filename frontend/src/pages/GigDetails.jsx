@@ -62,9 +62,11 @@ export default function GigDetails() {
       onConfirm: async () => {
         try {
           await api.delete(`/gigs/${id}`);
+          toast.success("Gig deleted successfully.");
           navigate("/profile");
         } catch (err) {
           console.error(err);
+          toast.error(err.response?.data?.message || "Delete failed");
         }
       },
     });

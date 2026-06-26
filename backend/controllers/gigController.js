@@ -119,7 +119,8 @@ export const deleteGig = async (req, res) => {
           type: "GIG_DELETED",
           title: "Gig Deleted",
           message: `The gig "${gig.title}" you bid on has been deleted.`,
-          link: "/profile"
+          link: "/profile",
+          meta: { role: "freelancer", gigId: gig._id, bidId: bid._id }
         });
 
         if (io) {
@@ -245,7 +246,8 @@ export const startWork = async (req, res) => {
       type: "CONTRACT_STARTED",
       title: "Work Started",
       message: `Freelancer started work on "${gig.title}".`,
-      link: "/profile"
+      link: "/profile",
+      meta: { role: "client", gigId: gig._id, bidId: bid._id }
     });
 
     res.json({ success: true, gig });
@@ -272,6 +274,8 @@ export const submitWork = async (req, res) => {
       return res.status(403).json({ message: "Only the hired freelancer can submit work." });
     }
 
+    const isRevision = !!bid.revisionNotes;
+
     gig.status = "submitted";
     await gig.save();
 
@@ -283,10 +287,13 @@ export const submitWork = async (req, res) => {
     await notifyUser({
       senderId: req.userId,
       receiverId: gig.ownerId,
-      type: "WORK_SUBMITTED",
-      title: "Work Submitted for Review",
-      message: `Freelancer submitted work for review on "${gig.title}".`,
-      link: `/gig/${gig._id}`
+      type: isRevision ? "REVISION_SUBMITTED" : "WORK_SUBMITTED",
+      title: isRevision ? "Revision Submitted" : "Work Submitted for Review",
+      message: isRevision 
+        ? `Freelancer submitted revisions for "${gig.title}".`
+        : `Freelancer submitted work for review on "${gig.title}".`,
+      link: `/gig/${gig._id}`,
+      meta: { role: "client", gigId: gig._id, bidId: bid._id }
     });
 
     res.json({ success: true, gig });
@@ -326,7 +333,8 @@ export const approveWork = async (req, res) => {
       type: "WORK_APPROVED",
       title: "Work Approved!",
       message: `Your work on "${gig.title}" has been approved.`,
-      link: `/gig/${gig._id}`
+      link: `/gig/${gig._id}`,
+      meta: { role: "freelancer", gigId: gig._id, bidId: bid._id }
     });
 
     res.json({ success: true, gig });
@@ -377,7 +385,7 @@ export const requestChanges = async (req, res) => {
       title: "Revisions Requested",
       message: `Client requested revisions on "${gig.title}".`,
       link: `/gig/${gig._id}`,
-      meta: { notes: notes.trim(), gigId: gig._id }
+      meta: { notes: notes.trim(), gigId: gig._id, bidId: bid._id, role: "freelancer" }
     });
 
     res.json({ success: true, gig });

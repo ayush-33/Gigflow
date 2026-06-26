@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Bid from "../models/bid.js";
 import Gig from "../models/gig.js";
 import { notifyUser } from "../utils/notifyUser.js";
@@ -37,11 +38,6 @@ export const createBid = async (req, res) => {
     if (existingActiveBid)
       return res.status(400).json({ message: "You have already placed an active bid on this gig" });
 
-    if (gig.status === "open") {
-      gig.status = "bidding";
-      await gig.save();
-    }
-
     const bid = await Bid.create({
       gigId,
       bidderId: req.userId,
@@ -66,7 +62,8 @@ export const createBid = async (req, res) => {
         type: "NEW_BID",
         title: "New Bid Received",
         message: `You received a new bid from ${populatedBid.bidderId.name}.`,
-        link: `/profile`
+        link: `/profile`,
+        meta: { role: "client", bidId: bid._id, gigId: gig._id }
       });
     }
 
@@ -80,6 +77,11 @@ export const createBid = async (req, res) => {
 export const getBidsByGig = async (req, res) => {
   try {
     const { gigId } = req.params;
+
+    if (!gigId || gigId === "undefined" || !mongoose.Types.ObjectId.isValid(gigId)) {
+      return res.status(400).json({ message: "Invalid or missing Gig ID" });
+    }
+
     const bids = await Bid.find({ gigId })
       .populate("bidderId", "name email")
       .sort({ createdAt: -1 });
@@ -145,8 +147,9 @@ export const acceptBid = async (req, res) => {
       title: "Bid Accepted",
       message: isOwner 
         ? `Your bid on "${gig.title}" has been accepted.` 
-        : `${bid.bidderId.name} accepted your counter offer on "${gig.title}".`,
-      link: "/profile"
+        : `${bid.bidderId.name} accepted your counter offer on "${gig.title}". Complete payment to start the project.`,
+      link: "/profile",
+      meta: { role: isOwner ? "freelancer" : "client", bidId: bid._id, gigId: gig._id }
     });
 
     res.json({
@@ -202,7 +205,8 @@ export const rejectBid = async (req, res) => {
       message: isOwner
         ? `Your bid on "${gig.title}" was rejected.`
         : `Your counter offer on "${gig.title}" was declined.`,
-      link: "/profile"
+      link: "/profile",
+      meta: { role: isOwner ? "freelancer" : "client", bidId: bid._id, gigId: gig._id }
     });
 
     res.json(bid);
@@ -228,11 +232,14 @@ export const withdrawBid = async (req, res) => {
     const gig = await Gig.findById(bid.gigId);
     if (gig?.ownerId) {
       await notifyUser({
-  userId: gig.ownerId,
-  message: `${bid.bidderId.name} withdrew their bid from "${gig.title}"`,
-  type: "message",
-  link: `/gig/${gig._id}`
-});
+        senderId: req.userId,
+        receiverId: gig.ownerId,
+        type: "BID_WITHDRAWN",
+        title: "Bid Withdrawn",
+        message: `${bid.bidderId.name} withdrew their bid from "${gig.title}"`,
+        link: `/profile`,
+        meta: { role: "client", bidId: bid._id, gigId: gig._id }
+      });
     }
 
     bid.status = "withdrawn";
@@ -291,7 +298,8 @@ export const counterBid = async (req, res) => {
       type: "COUNTER_OFFER_RECEIVED",
       title: "Counter Offer Received",
       message: `You received a counter offer of $${price} on "${gig.title}".`,
-      link: "/profile"
+      link: "/profile",
+      meta: { role: isOwner ? "freelancer" : "client", bidId: bid._id, gigId: gig._id }
     });
 
     res.json(bid);

@@ -169,6 +169,9 @@ export const updateOfferStatus = async (req, res) => {
 
     // Notify the sender about the update using standard uppercase type enums
     const { notifyUser } = await import("../utils/notifyUser.js");
+    const isSenderOwner = gig.ownerId.toString() === msg.senderId.toString();
+    const role = isSenderOwner ? "client" : "freelancer";
+
     await notifyUser({
       senderId: req.userId,
       receiverId: msg.senderId,
@@ -177,7 +180,8 @@ export const updateOfferStatus = async (req, res) => {
       message: status === "accepted"
         ? `Your offer of $${msg.price} on "${gig.title}" has been accepted.`
         : `Your offer of $${msg.price} on "${gig.title}" was declined.`,
-      link: "/profile"
+      link: "/profile",
+      meta: { role, gigId: gig._id, bidId: bid?._id }
     });
 
     if (status === "accepted" && bid && gig.ownerId.toString() === req.userId) {
