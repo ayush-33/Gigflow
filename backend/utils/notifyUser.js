@@ -10,6 +10,12 @@ export const notifyUser = async (data) => {
   const resolvedTitle = title || data.title || "New Update";
   const resolvedLink = link || data.link || "/";
 
+  // Self-notification / actor-recipient guard
+  if (senderId && resolvedReceiverId && senderId.toString() === resolvedReceiverId.toString()) {
+    console.log(`[notifyUser] Skipping self-notification of type: ${type} for user: ${senderId}`);
+    return null;
+  }
+
   // Deduplication check: check if an identical notification exists within the last 60 seconds
   const targetEntityId = meta?.gigId?.toString() || meta?.bidId?.toString() || meta?.orderId?.toString() || resolvedLink || "";
   const sixtySecondsAgo = new Date(Date.now() - 60000);

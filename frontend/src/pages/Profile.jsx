@@ -753,13 +753,8 @@ export default function Profile() {
                 <div className="stat-card" onClick={() => setActiveTab("bids")} style={{ cursor: 'pointer' }}>
                   <div className="stat-icon-box blue">💬</div>
                   <div className="stat-body">
-                    <div className="stat-number" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="stat-number">
                       {stats.bidsPlaced ?? bids.length}
-                      {bidsUnreadCount > 0 && (
-                        <span className="sidebar-badge" style={{ fontSize: '10px', padding: '2px 6px', height: 'auto', minWidth: 'auto', margin: 0 }}>
-                          {bidsUnreadCount}
-                        </span>
-                      )}
                     </div>
                     <div className="stat-label">My Bids</div>
                   </div>
@@ -767,13 +762,8 @@ export default function Profile() {
                 <div className="stat-card" onClick={() => setActiveTab("offers")} style={{ cursor: 'pointer' }}>
                   <div className="stat-icon-box blue">📥</div>
                   <div className="stat-body">
-                    <div className="stat-number" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="stat-number">
                       {stats.offersReceived ?? receivedBids.length}
-                      {offersUnreadCount > 0 && (
-                        <span className="sidebar-badge" style={{ fontSize: '10px', padding: '2px 6px', height: 'auto', minWidth: 'auto', margin: 0 }}>
-                          {offersUnreadCount}
-                        </span>
-                      )}
                     </div>
                     <div className="stat-label">Offers Received</div>
                   </div>

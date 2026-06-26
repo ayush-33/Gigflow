@@ -56,11 +56,25 @@ export function NotificationProvider({ children }) {
     if (!socket) return;
 
     const handleNotification = (newNotif) => {
+      // Guard: do not show toast or append to notification array if current user is the sender (actor)
+      const senderIdStr = newNotif.senderId?._id?.toString() || newNotif.senderId?.toString();
+      const currentUserId = user?._id?.toString() || user?.id?.toString();
+      if (senderIdStr && currentUserId && senderIdStr === currentUserId) {
+        console.log("[NotificationContext] Bypassing self-notification from socket");
+        return;
+      }
       setNotifications((prev) => [newNotif, ...prev]);
       showToast(newNotif.message || newNotif.body || "New notification!", "notification");
     };
 
     const handleNewMessage = (msg) => {
+      // Guard: do not show toast or increment count if current user is the sender (actor)
+      const senderIdStr = msg.senderId?._id?.toString() || msg.senderId?.toString();
+      const currentUserId = user?._id?.toString() || user?.id?.toString();
+      if (senderIdStr && currentUserId && senderIdStr === currentUserId) {
+        return;
+      }
+
       // ✅ Only toast and increment if the message is actually unread/new
       if (msg.status === "read") return;
 
