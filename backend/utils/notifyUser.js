@@ -1,5 +1,4 @@
 import Notification from "../models/notificationModel.js";
-import { io } from "../server.js";
 
 export const notifyUser = async (data) => {
   const { senderId, receiverId, type, title, message, link, meta } = data;
@@ -47,6 +46,7 @@ export const notifyUser = async (data) => {
     meta: meta || {}
   });
 
+  const { io } = await import("../server.js");
   if (io) {
     const roomStr = resolvedReceiverId.toString();
     io.to(roomStr).emit("notification", notification);

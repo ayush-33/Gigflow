@@ -8,7 +8,7 @@ import "../styles/Chat.css";
 
 /* ── helpers ── */
 function buildRoomId(gigId, userA, userB) {
-  return [userA, userB].sort().join("_");
+  return [userA, userB].sort().join("_") + "_" + gigId;
 }
 
 function relTime(dateStr) {
@@ -32,7 +32,7 @@ function formatTime(dateStr) {
 }
 
 function formatDay(dateStr) {
-  const d   = new Date(dateStr);
+  const d = new Date(dateStr);
   const now = new Date();
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
@@ -42,9 +42,15 @@ function formatDay(dateStr) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+const resolveUserId = (userObj) => {
+  if (!userObj) return null;
+  if (typeof userObj === "string") return userObj;
+  return userObj._id?.toString() || userObj.id?.toString() || null;
+};
+
 /* ── Offer bubble ── */
 function OfferBubble({ msg, isMine }) {
-  const isPending  = msg.offerStatus === "pending";
+  const isPending = msg.offerStatus === "pending";
   const isAccepted = msg.offerStatus === "accepted";
   const isRejected = msg.offerStatus === "rejected";
 
@@ -151,9 +157,21 @@ function RoomItem({ room, active, onClick, currentUserId }) {
       </div>
       <div className="room-info">
         <div className="room-info-main">
-          <span className={`room-participant-name ${room.unreadCount > 0 ? "unread-bold" : ""}`}>
-            {room.otherUser?.name || "Participant"}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginBottom: "4px" }}>
+            <span className={`room-participant-name ${room.unreadCount > 0 ? "unread-bold" : ""}`} style={{ marginRight: "4px" }}>
+              {room.otherUser?.name || "Participant"}
+            </span>
+            {room.currentBidId?.status && (
+              <span className={`bid-status-chip ${room.currentBidId.status}`}>
+                {room.currentBidId.status}
+              </span>
+            )}
+            {room.bidHistory && room.bidHistory.length > 1 && (
+              <span className="bid-rebid-badge">
+                Rebid ({room.bidHistory.length})
+              </span>
+            )}
+          </div>
           <div className={`room-last-msg ${room.unreadCount > 0 ? "unread-bold" : ""}`}>
             {room.lastMessage?.type === "offer"
               ? `💰 Offer: $${room.lastMessage?.price}`
@@ -178,32 +196,59 @@ function RoomItem({ room, active, onClick, currentUserId }) {
 ════════════════════════════════════════ */
 export default function Chat() {
   const { roomId: urlRoomId } = useParams();
-  const navigate  = useNavigate();
-  const location  = useLocation();
-  const { user }  = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
 
   // From navigation state (when opening chat from GigDetails)
-  const initGigId      = location.state?.gigId;
+  const initGigId = location.state?.gigId;
   const initReceiverId = location.state?.receiverId;
-  const initGigTitle   = location.state?.gigTitle;
-  const initGigPrice   = location.state?.gigPrice;
+  const initGigTitle = location.state?.gigTitle;
+  const initGigPrice = location.state?.gigPrice;
 
-  const [rooms,        setRooms]        = useState([]);
-  const [activeRoom,   setActiveRoom]   = useState(null);
-  const [messages,     setMessages]     = useState([]);
-  const [text,         setText]         = useState("");
-  const [loadingMsgs,  setLoadingMsgs]  = useState(false);
-  const [showOffer,    setShowOffer]    = useState(false);
-  const [offerPrice,   setOfferPrice]   = useState("");
-  const [offerNote,    setOfferNote]    = useState("");
-  const [typing,       setTyping]       = useState(false);
-  const [typingUser,   setTypingUser]   = useState("");
+  const [rooms, setRooms] = useState([]);
+  const [activeRoom, setActiveRoom] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [text, setText] = useState("");
+  const [loadingMsgs, setLoadingMsgs] = useState(false);
+  const [showOffer, setShowOffer] = useState(false);
+  const [offerPrice, setOfferPrice] = useState("");
+  const [offerNote, setOfferNote] = useState("");
+  const [typing, setTyping] = useState(false);
+  const [typingUser, setTypingUser] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
 
   const messagesEndRef = useRef(null);
-  const typingTimer    = useRef(null);
-  const socket         = getSocket();
+  const typingTimer = useRef(null);
+  const socket = getSocket();
 
-  const otherUserName = activeRoom?.otherUser?.name 
+  // Refs for tracking state inside socket event listeners to avoid stale closures
+  const activeRoomRef = useRef(activeRoom);
+  const userRef = useRef(user);
+
+  useEffect(() => {
+    activeRoomRef.current = activeRoom;
+  }, [activeRoom]);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  useEffect(() => {
+    if (!activeRoom) return;
+    const currentRoom = rooms.find(r => r.roomId === activeRoom.roomId);
+    if (currentRoom && JSON.stringify(currentRoom.bidHistory) !== JSON.stringify(activeRoom.bidHistory)) {
+      setActiveRoom(prev => ({
+        ...prev,
+        bidHistory: currentRoom.bidHistory,
+        currentBidId: currentRoom.currentBidId
+      }));
+    }
+  }, [rooms, activeRoom?.roomId]);
+
+  const processedInitRef = useRef(false);
+
+  const otherUserName = activeRoom?.otherUser?.name
     || rooms.find(r => r._id === activeRoom?.roomId)?.otherUser?.name
     || location.state?.receiverName
     || "Chat";
@@ -225,124 +270,121 @@ export default function Chat() {
 
   /* ── Load rooms ── */
   useEffect(() => {
-    api.get("/chat/rooms")
-    
+    api.get("/conversations")
       .then(r => setRooms(r.data))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
-// ── Open room from URL ──
-useEffect(() => {
-  if (!urlRoomId || rooms.length === 0) return;
-  if (activeRoom?.roomId === urlRoomId) return;
-  // room._id from aggregation IS the roomId string
-  const room = rooms.find(r => r._id === urlRoomId);
-  if (room) openRoomFromList(room);
-}, [urlRoomId, rooms, activeRoom?.roomId]);
-
-  /* ── If opened from GigDetails, auto-set active room ── */
+  /* ── Open room from URL (Single Source of Truth) ── */
   useEffect(() => {
-    if (!initGigId || !initReceiverId || !user) return;
-    const rId = buildRoomId(initGigId, user._id, initReceiverId);
-    if (activeRoom?.roomId === rId) return;
-    setActiveRoom({
-      roomId:      rId,
-      gigId:       initGigId,
-      receiverId:  initReceiverId,
-      gigTitle:    initGigTitle,
-      gigPrice:    initGigPrice,
-      otherUser:   { name: location.state?.receiverName || "User" }
-    });
+    if (!urlRoomId || !user) {
+      setActiveRoom(null);
+      setMessages([]);
+      return;
+    }
+    if (activeRoom?.roomId === urlRoomId) return;
+
+    api.get(`/conversations/${urlRoomId}`)
+      .then(res => {
+        setActiveRoom(res.data);
+        setMessages([]);
+      })
+      .catch(err => {
+        console.error("Failed to load conversation details:", err.message);
+        setActiveRoom(null);
+        setMessages([]);
+      });
+  }, [urlRoomId, user]);
+
+  /* ── If opened from GigDetails/Profile state navigation ── */
+  useEffect(() => {
+    if (processedInitRef.current) return;
+    if (!initGigId || !initReceiverId || !user || rooms.length === 0) return;
+
+    processedInitRef.current = true;
+
+    const matchedRoom = rooms.find(r =>
+      r.gigId?.toString() === initGigId.toString() &&
+      (r.otherUser?._id?.toString() === initReceiverId.toString() || r.otherUser?.id?.toString() === initReceiverId.toString())
+    );
+
+    let rId;
+    if (matchedRoom) {
+      rId = matchedRoom.roomId;
+    } else {
+      // Fallback constructor for backward compatibility during migration window
+      rId = [user._id, initReceiverId].sort().join("_") + "_" + initGigId;
+    }
+
+    setMessages([]);
     navigate(`/chat/${rId}`, { replace: true, state: null });
-  }, [initGigId, initReceiverId, user, initGigTitle, initGigPrice, navigate, location.state?.receiverName, activeRoom?.roomId]);
+  }, [rooms, initGigId, initReceiverId, user, navigate]);
 
   /* ── Load messages for active room ── */
   useEffect(() => {
-    if (!activeRoom) return;
+    if (!activeRoom) {
+      setMessages([]);
+      return;
+    }
     setLoadingMsgs(true);
-    api.get(`/chat/rooms/${activeRoom.roomId}/messages`)
+    setMessages([]);
+    api.get(`/conversations/${activeRoom.roomId}/messages`)
       .then(r => {
         setMessages(Array.isArray(r.data) ? r.data : []);
       })
       .catch(() => setMessages([]))
       .finally(() => setLoadingMsgs(false));
-  }, [activeRoom]);
+  }, [activeRoom?.roomId]);
 
-useEffect(() => {
-  if (!socket || !activeRoom) return;
+  useEffect(() => {
+    if (!socket || !activeRoom) return;
 
-  // join room
-  socket.emit("joinRoom", activeRoom.roomId);
+    // join room
+    socket.emit("joinRoom", activeRoom.roomId);
 
-  // mark messages as seen
-  socket.emit("markSeen", {
-    roomId: activeRoom.roomId,
-  });
+    // mark messages as seen
+    socket.emit("markSeen", {
+      roomId: activeRoom.roomId,
+    });
 
-  return () => {
-    socket.emit("leaveRoom", activeRoom.roomId);
-  };
-}, [socket, activeRoom?.roomId]);
+    return () => {
+      socket.emit("leaveRoom", activeRoom.roomId);
+    };
+  }, [socket, activeRoom?.roomId]);
 
   /* ── Socket: listen for messages ── */
   useEffect(() => {
     if (!socket) return;
 
     socket.on("receiveMessage", (msg) => {
-      setMessages(prev => {
-        if (prev.some(m => m._id === msg._id)) return prev;
-        return [...prev, msg];
-      });
+      const active = activeRoomRef.current;
+      const currentUser = userRef.current;
+      const isFromActiveRoom = msg.roomId === active?.roomId;
 
-      const isFromActiveRoom = msg.roomId === activeRoom?.roomId;
-      const receiverIdStr = msg.receiverId?._id?.toString() || msg.receiverId?.toString();
-      if (isFromActiveRoom && receiverIdStr === user?._id?.toString()) {
-        socket.emit("markSeen", { roomId: activeRoom.roomId });
-      }
-
-      setRooms(prev =>
-        prev.map(room => {
-          const isThisRoom = (room._id || room.roomId) === msg.roomId;
-          if (isThisRoom) {
-            const isCurrentActive = activeRoom?.roomId === msg.roomId;
-            return {
-              ...room,
-              lastMessage: msg,
-              unreadCount: isCurrentActive ? 0 : (room.unreadCount || 0) + 1
-            };
-          }
-          return room;
-        })
-      );
-    });
-
-    socket.on("newMessage", (msg) => {
-      const isFromActiveRoom = msg.roomId === activeRoom?.roomId;
-      
       if (isFromActiveRoom) {
         setMessages(prev => {
           if (prev.some(m => m._id === msg._id)) return prev;
           return [...prev, msg];
         });
-        const receiverIdStr = msg.receiverId?._id?.toString() || msg.receiverId?.toString();
-        if (receiverIdStr === user?._id?.toString()) {
-          socket.emit("markSeen", { roomId: activeRoom.roomId });
+        const receiverIdStr = resolveUserId(msg.receiverId);
+        if (receiverIdStr === resolveUserId(currentUser)) {
+          socket.emit("markSeen", { roomId: active.roomId });
         }
       }
 
       setRooms(prev => {
-        const roomExists = prev.some(room => (room._id || room.roomId) === msg.roomId);
+        const roomExists = prev.some(room => (room.roomId || room._id) === msg.roomId);
         if (!roomExists) {
-          api.get("/chat/rooms")
+          api.get("/conversations")
             .then(r => setRooms(r.data))
-            .catch(() => {});
+            .catch(() => { });
           return prev;
         }
 
         return prev.map(room => {
-          const isThisRoom = (room._id || room.roomId) === msg.roomId;
+          const isThisRoom = (room.roomId || room._id) === msg.roomId;
           if (isThisRoom) {
-            const isCurrentActive = activeRoom?.roomId === msg.roomId;
+            const isCurrentActive = active?.roomId === msg.roomId;
             return {
               ...room,
               lastMessage: msg,
@@ -352,6 +394,119 @@ useEffect(() => {
           return room;
         });
       });
+    });
+
+    socket.on("newMessage", (msg) => {
+      const active = activeRoomRef.current;
+      const currentUser = userRef.current;
+      const isFromActiveRoom = msg.roomId === active?.roomId;
+
+      if (isFromActiveRoom) {
+        setMessages(prev => {
+          if (prev.some(m => m._id === msg._id)) return prev;
+          return [...prev, msg];
+        });
+        const receiverIdStr = resolveUserId(msg.receiverId);
+        if (receiverIdStr === resolveUserId(currentUser)) {
+          socket.emit("markSeen", { roomId: active.roomId });
+        }
+      }
+
+      setRooms(prev => {
+        const roomExists = prev.some(room => (room.roomId || room._id) === msg.roomId);
+        if (!roomExists) {
+          api.get("/conversations")
+            .then(r => setRooms(r.data))
+            .catch(() => { });
+          return prev;
+        }
+
+        return prev.map(room => {
+          const isThisRoom = (room.roomId || room._id) === msg.roomId;
+          if (isThisRoom) {
+            const isCurrentActive = active?.roomId === msg.roomId;
+            return {
+              ...room,
+              lastMessage: msg,
+              unreadCount: isCurrentActive ? 0 : (room.unreadCount || 0) + 1
+            };
+          }
+          return room;
+        });
+      });
+    });
+
+    socket.on("bidPlaced", (data) => {
+      api.get("/conversations")
+        .then(r => setRooms(r.data))
+        .catch(() => { });
+    });
+
+    socket.on("bidResubmitted", (data) => {
+      setRooms(prev => {
+        const room = prev.find(r => r.conversationId === data.conversationId || r.roomId === data.roomId);
+        if (!room) {
+          api.get("/conversations")
+            .then(r => setRooms(r.data))
+            .catch(() => { });
+          return prev;
+        }
+        const updatedRoom = {
+          ...room,
+          currentBidId: {
+            ...room.currentBidId,
+            _id: data.newBidId,
+            status: "pending"
+          }
+        };
+        return [updatedRoom, ...prev.filter(r => r.roomId !== room.roomId)];
+      });
+    });
+
+    socket.on("conversationUpdated", (data) => {
+      setRooms(prev => {
+        const exists = prev.some(r => r.conversationId === data.conversationId || r.roomId === data.roomId);
+        if (!exists) {
+          api.get("/conversations")
+            .then(r => setRooms(r.data))
+            .catch(() => { });
+          return prev;
+        }
+        return prev.map(r => {
+          if (r.conversationId === data.conversationId || r.roomId === data.roomId) {
+            const isCurrentActive = activeRoomRef.current?.roomId === r.roomId;
+            const isClient = data.clientId ? (resolveUserId(userRef.current) === resolveUserId(data.clientId)) : false;
+            const unreadCount = isCurrentActive ? 0 : (isClient ? (data.unreadCount?.client || 0) : (data.unreadCount?.freelancer || 0));
+
+            return {
+              ...r,
+              lastMessage: data.lastMessage,
+              lastMessageAt: data.lastMessageAt,
+              unreadCount,
+              currentBidId: data.currentBidId ? {
+                ...r.currentBidId,
+                ...data.currentBidId
+              } : r.currentBidId
+            };
+          }
+          return r;
+        }).sort((a, b) => new Date(b.lastMessageAt || b.updatedAt) - new Date(a.lastMessageAt || a.updatedAt));
+      });
+
+      const active = activeRoomRef.current;
+      if (active && (active.conversationId === data.conversationId || active.roomId === data.roomId)) {
+        setActiveRoom(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            currentBidId: data.currentBidId ? {
+              ...prev.currentBidId,
+              ...data.currentBidId
+            } : prev.currentBidId,
+            bidHistory: data.bidHistory || prev.bidHistory
+          };
+        });
+      }
     });
 
     socket.on("offerUpdated", ({ messageId, status }) => {
@@ -369,9 +524,11 @@ useEffect(() => {
     });
 
     socket.on('messagesSeen', ({ roomId, userId }) => {
-      if (roomId === activeRoom?.roomId && userId !== user?._id?.toString()) {
-        setMessages(prev => prev.map(m => 
-          (m.senderId?._id || m.senderId)?.toString() === user?._id?.toString()
+      const active = activeRoomRef.current;
+      const currentUser = userRef.current;
+      if (roomId === active?.roomId && userId !== resolveUserId(currentUser)) {
+        setMessages(prev => prev.map(m =>
+          resolveUserId(m.senderId) === resolveUserId(currentUser)
             ? { ...m, status: "read" }
             : m
         ));
@@ -385,9 +542,11 @@ useEffect(() => {
     });
 
     socket.on('messagesDelivered', ({ roomId, receiverId }) => {
-      if (roomId === activeRoom?.roomId) {
-        setMessages(prev => prev.map(m => 
-          (m.senderId?._id || m.senderId)?.toString() === user?._id?.toString() && m.status === "sent"
+      const active = activeRoomRef.current;
+      const currentUser = userRef.current;
+      if (roomId === active?.roomId) {
+        setMessages(prev => prev.map(m =>
+          resolveUserId(m.senderId) === resolveUserId(currentUser) && m.status === "sent"
             ? { ...m, status: "delivered" }
             : m
         ));
@@ -407,8 +566,11 @@ useEffect(() => {
       socket.off("userStopTyping");
       socket.off("messagesSeen");
       socket.off("messagesDelivered");
+      socket.off("bidPlaced");
+      socket.off("bidResubmitted");
+      socket.off("conversationUpdated");
     };
-  }, [socket, activeRoom?.roomId, user?._id]);
+  }, [socket]);
 
 
   /* ── Send text message ── */
@@ -416,11 +578,11 @@ useEffect(() => {
     if (!text.trim() || !activeRoom || !socket) return;
 
     socket.emit("sendMessage", {
-      roomId:     activeRoom.roomId,
-      gigId:      activeRoom.gigId,
+      roomId: activeRoom.roomId,
+      gigId: activeRoom.gigId,
       receiverId: activeRoom.receiverId,
-      type:       "text",
-      message:    text.trim(),
+      type: "text",
+      message: text.trim(),
     });
 
     setText("");
@@ -437,12 +599,12 @@ useEffect(() => {
     if (!activeRoom || !socket) return;
 
     socket.emit("sendMessage", {
-      roomId:     activeRoom.roomId,
-      gigId:      activeRoom.gigId,
+      roomId: activeRoom.roomId,
+      gigId: activeRoom.gigId,
       receiverId: activeRoom.receiverId,
-      type:       "offer",
-      message:    offerNote.trim() || `I can do this for $${offerPrice}`,
-      price:      Number(offerPrice),
+      type: "offer",
+      message: offerNote.trim() || `I can do this for $${offerPrice}`,
+      price: Number(offerPrice),
     });
 
     setOfferPrice("");
@@ -460,7 +622,7 @@ useEffect(() => {
       roomId: activeRoom.roomId,
     });
     try {
-      const { data } = await api.put(`/chat/messages/${messageId}/offer`, { status: "accepted" });
+      const { data } = await api.put(`/conversations/messages/${messageId}/offer`, { status: "accepted" });
       showToast("Offer accepted! 🎉");
       if (data.checkoutData) {
         navigate("/checkout", {
@@ -482,7 +644,7 @@ useEffect(() => {
       status: "rejected",
       roomId: activeRoom.roomId,
     });
-    api.put(`/chat/messages/${messageId}/offer`, { status: "rejected" });
+    api.put(`/conversations/messages/${messageId}/offer`, { status: "rejected" });
     showToast("Offer declined.");
   };
 
@@ -499,7 +661,7 @@ useEffect(() => {
     if (!typing) {
       setTyping(true);
       socket.emit("typing", {
-        roomId:   activeRoom.roomId,
+        roomId: activeRoom.roomId,
         userName: user?.name,
       });
     }
@@ -527,33 +689,10 @@ useEffect(() => {
     return acc;
   }, {});
 
-  /* ── Open chat from gig page ── */
-  const openRoomFromList = (room) => {
-    // room._id here is the roomId string from the aggregation $group _id: "$roomId"
-    const roomId = room._id; // This IS the actual "gigId_userId1_userId2" string
-
-    // Determine who the "other" user is
-    const myId = user?._id?.toString();
-    const senderId = room.lastMessage?.senderId?.toString?.() 
-      || room.lastMessage?.senderId?.toString();
-    const receiverId = room.lastMessage?.receiverId?.toString?.() 
-      || room.lastMessage?.receiverId?.toString();
-    
-    const otherUserId = senderId === myId ? receiverId : senderId;
-
-    setActiveRoom({
-      roomId,                     // ← correct: the actual room string
-      gigId: room.gigId?.toString() || room.gigId,
-      receiverId: otherUserId,
-      gigTitle: room.gig?.title,
-      gigPrice: room.gig?.price,
-      otherUser: room.otherUser,  // ✅ Keep otherUser info
-    });
-    navigate(`/chat/${roomId}`);
-  };
-useEffect(() => {
-  if (!user) navigate("/login");
-}, [user, navigate]);
+  // openRoomFromList was removed - routing is now entirely URL-driven
+  useEffect(() => {
+    if (!user) navigate("/login");
+  }, [user, navigate]);
 
   return (
     <div className="chat-page">
@@ -578,7 +717,7 @@ useEffect(() => {
                 room={room}
                 active={activeRoom?.roomId === room._id}
                 currentUserId={user?._id}
-                onClick={() => openRoomFromList(room)}
+                onClick={() => navigate(`/chat/${room.roomId || room._id}`)}
               />
             ))}
           </div>
@@ -596,14 +735,90 @@ useEffect(() => {
         ) : (
           <>
             {/* Header */}
-            <div className="chat-header">
-              <button className="chat-back-btn" onClick={() => setActiveRoom(null)}>←</button>
-              <div className="chat-header-info">
-                <div className="chat-header-title">{otherUserName}</div>
-                <div className="chat-header-sub">
-                  {activeRoom.gigTitle ? `for: ${activeRoom.gigTitle}` : "Gig Chat"}
+            <div className="chat-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", position: "relative" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <button className="chat-back-btn" onClick={() => setActiveRoom(null)}>←</button>
+                <div className="chat-header-info">
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <h3 className="chat-header-project-title" style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "var(--chat-text-pri)" }}>
+                      {activeRoom.gigTitle || activeRoom.gig?.title || "Gig Chat"}
+                    </h3>
+                    {activeRoom.currentBidId?.status && (
+                      <span className={`bid-status-chip ${activeRoom.currentBidId.status}`}>
+                        {activeRoom.currentBidId.status}
+                      </span>
+                    )}
+                  </div>
+                  <div className="chat-header-participant" style={{ fontSize: "13px", fontWeight: "500", color: "var(--chat-text-mut)", marginTop: "4px" }}>
+                    Participant: {otherUserName}
+                  </div>
                 </div>
               </div>
+
+              {activeRoom.bidHistory && activeRoom.bidHistory.length > 0 && (
+                <button
+                  className="toolbar-btn btn-purple"
+                  style={{
+                    padding: "6px 12px",
+                    fontSize: "12px",
+                    borderRadius: "6px",
+                    background: "rgba(139, 92, 246, 0.15)",
+                    border: "1px solid rgba(139, 92, 246, 0.3)",
+                    color: "#c084fc",
+                    cursor: "pointer",
+                    zIndex: 10,
+                    width: "fit-content"
+                  }}
+                  onClick={() => setShowHistory(!showHistory)}
+                >
+                  📜 History ({activeRoom.bidHistory.length})
+                </button>
+              )}
+
+              {/* Collapsible Floating Bid History Panel */}
+              {showHistory && activeRoom.bidHistory && activeRoom.bidHistory.length > 0 && (
+                <div className="bid-history-panel" style={{
+                  position: "absolute",
+                  top: "72px",
+                  right: "24px",
+                  width: "250px",
+                  background: "var(--chat-bg-sidebar)",
+                  border: "1px solid var(--chat-border)",
+                  borderRadius: "12px",
+                  boxShadow: "0 12px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)",
+                  padding: "16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                  maxHeight: "250px",
+                  overflowY: "auto",
+                  zIndex: 100
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "8px", marginBottom: "4px" }}>
+                    <h4 style={{ margin: 0, fontSize: "13px", fontWeight: "700", color: "var(--chat-text-pri)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Proposal & Bid History</h4>
+                  </div>
+                  {activeRoom.bidHistory.map((bidItem, idx) => (
+                    <div key={idx} className="bid-history-item" style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      fontSize: "12.5px",
+                      background: "rgba(255, 255, 255, 0.02)",
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(255, 255, 255, 0.04)"
+                    }}>
+                      <span style={{ fontWeight: "600", color: "var(--chat-text-pri)" }}>Attempt #{idx + 1}: ${bidItem.price}</span>
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <span className={`bid-status-chip ${bidItem.status}`}>{bidItem.status}</span>
+                        <span style={{ fontSize: "11px", color: "var(--chat-text-mut)" }}>
+                          {new Date(bidItem.submittedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Messages */}
@@ -626,7 +841,7 @@ useEffect(() => {
                       <MessageBubble
                         key={msg._id}
                         msg={msg}
-                        isMine={(msg.senderId?._id || msg.senderId)?.toString() === user?._id?.toString()}
+                        isMine={resolveUserId(msg.senderId) === resolveUserId(user)}
                         onAccept={handleAcceptOffer}
                         onReject={handleRejectOffer}
                         onCounter={handleCounter}

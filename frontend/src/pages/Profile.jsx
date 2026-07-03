@@ -408,6 +408,7 @@ export default function Profile() {
 
     const handleUpdate = () => {
       fetchAll();
+      fetchNotifications();
     };
 
     socket.on("notification", handleUpdate);
@@ -415,6 +416,7 @@ export default function Profile() {
     socket.on("bidHired", handleUpdate);
     socket.on("newMessage", handleUpdate);
     socket.on("gigDeleted", handleUpdate);
+    socket.on("conversationUpdated", handleUpdate);
 
     return () => {
       socket.off("notification", handleUpdate);
@@ -422,8 +424,9 @@ export default function Profile() {
       socket.off("bidHired", handleUpdate);
       socket.off("newMessage", handleUpdate);
       socket.off("gigDeleted", handleUpdate);
+      socket.off("conversationUpdated", handleUpdate);
     };
-  }, [fetchAll, socket]);
+  }, [fetchAll, fetchNotifications, socket]);
 
   useEffect(() => {
     if (location.state?.tab) {
@@ -741,7 +744,6 @@ export default function Profile() {
                 </div>
               </div>
 
-              {/* Analytics Grid */}
               <div className="stats-grid">
                 <div className="stat-card" onClick={() => setActiveTab("gigs")} style={{ cursor: 'pointer' }}>
                   <div className="stat-icon-box blue">📦</div>
@@ -750,20 +752,48 @@ export default function Profile() {
                     <div className="stat-label">Gigs Posted</div>
                   </div>
                 </div>
-                <div className="stat-card" onClick={() => setActiveTab("bids")} style={{ cursor: 'pointer' }}>
+                <div className="stat-card" onClick={() => setActiveTab("bids")} style={{ cursor: 'pointer', position: 'relative' }}>
                   <div className="stat-icon-box blue">💬</div>
                   <div className="stat-body">
                     <div className="stat-number">
                       {stats.bidsPlaced ?? bids.length}
+                      {bidsUnreadCount > 0 && (
+                        <span className="stat-card-badge" style={{
+                          position: "absolute",
+                          top: "12px",
+                          right: "12px",
+                          background: "#ef4444",
+                          color: "#fff",
+                          fontSize: "11px",
+                          fontWeight: "700",
+                          padding: "2px 6px",
+                          borderRadius: "10px",
+                          lineHeight: 1
+                        }}>{bidsUnreadCount}</span>
+                      )}
                     </div>
                     <div className="stat-label">My Bids</div>
                   </div>
                 </div>
-                <div className="stat-card" onClick={() => setActiveTab("offers")} style={{ cursor: 'pointer' }}>
+                <div className="stat-card" onClick={() => setActiveTab("offers")} style={{ cursor: 'pointer', position: 'relative' }}>
                   <div className="stat-icon-box blue">📥</div>
                   <div className="stat-body">
                     <div className="stat-number">
                       {stats.offersReceived ?? receivedBids.length}
+                      {offersUnreadCount > 0 && (
+                        <span className="stat-card-badge" style={{
+                          position: "absolute",
+                          top: "12px",
+                          right: "12px",
+                          background: "#ef4444",
+                          color: "#fff",
+                          fontSize: "11px",
+                          fontWeight: "700",
+                          padding: "2px 6px",
+                          borderRadius: "10px",
+                          lineHeight: 1
+                        }}>{offersUnreadCount}</span>
+                      )}
                     </div>
                     <div className="stat-label">Offers Received</div>
                   </div>
@@ -1213,7 +1243,15 @@ export default function Profile() {
                           ) : bid.status === "hired" ? (
                             <div className="card-actions-group cols-3">
                               <button className="toolbar-btn btn-primary" onClick={() => navigate(`/gig/${bid.gigId?._id}`)}>View Gig</button>
-                              <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat")}>Message Client</button>
+                              <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat", {
+                                state: {
+                                  gigId: bid.gigId?._id || bid.gigId,
+                                  receiverId: bid.gigId?.ownerId?._id || bid.gigId?.ownerId,
+                                  gigTitle: bid.gigId?.title,
+                                  gigPrice: bid.price,
+                                  receiverName: bid.gigId?.ownerId?.name,
+                                }
+                              })}>Message Client</button>
                               <button className="toolbar-btn btn-success" onClick={() => {
                                 api.put(`/gigs/${bid.gigId?._id || bid.gigId}/start-work`)
                                   .then(() => { fetchAll(); toast.success("Work started! 🔨"); })
@@ -1223,7 +1261,15 @@ export default function Profile() {
                           ) : bid.status === "in_progress" ? (
                             <div className="card-actions-group cols-3">
                               <button className="toolbar-btn btn-primary" onClick={() => navigate(`/gig/${bid.gigId?._id}`)}>View Gig</button>
-                              <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat")}>Message Client</button>
+                              <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat", {
+                                state: {
+                                  gigId: bid.gigId?._id || bid.gigId,
+                                  receiverId: bid.gigId?.ownerId?._id || bid.gigId?.ownerId,
+                                  gigTitle: bid.gigId?.title,
+                                  gigPrice: bid.price,
+                                  receiverName: bid.gigId?.ownerId?.name,
+                                }
+                              })}>Message Client</button>
                               <button className="toolbar-btn btn-success" onClick={() => {
                                 api.put(`/gigs/${bid.gigId?._id || bid.gigId}/submit-work`)
                                   .then(() => { fetchAll(); toast.success("Work submitted! ✅"); })
@@ -1233,13 +1279,29 @@ export default function Profile() {
                           ) : bid.status === "completed" ? (
                             <div className="card-actions-group cols-3">
                               <button className="toolbar-btn btn-primary" onClick={() => bid.gigId?._id && navigate(`/gig/${bid.gigId._id}`)}>View Project</button>
-                              <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat")}>Message Client</button>
+                              <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat", {
+                                state: {
+                                  gigId: bid.gigId?._id || bid.gigId,
+                                  receiverId: bid.gigId?.ownerId?._id || bid.gigId?.ownerId,
+                                  gigTitle: bid.gigId?.title,
+                                  gigPrice: bid.price,
+                                  receiverName: bid.gigId?.ownerId?.name,
+                                }
+                              })}>Message Client</button>
                               <button className="toolbar-btn btn-success" onClick={() => bid.gigId?._id && navigate(`/gig/${bid.gigId._id}`)}>Leave Review</button>
                             </div>
                           ) : (
                             <div className="card-actions-group cols-3">
                               <button className="toolbar-btn btn-primary" onClick={() => bid.gigId?._id && navigate(`/gig/${bid.gigId._id}`)}>View Gig</button>
-                              <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat")}>Message Client</button>
+                              <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat", {
+                                state: {
+                                  gigId: bid.gigId?._id || bid.gigId,
+                                  receiverId: bid.gigId?.ownerId?._id || bid.gigId?.ownerId,
+                                  gigTitle: bid.gigId?.title,
+                                  gigPrice: bid.price,
+                                  receiverName: bid.gigId?.ownerId?.name,
+                                }
+                              })}>Message Client</button>
                               <button className="toolbar-btn btn-secondary" onClick={() => setExpandedBidId(expandedBidId === bid._id ? null : bid._id)}>History</button>
                             </div>
                           )}
@@ -1434,13 +1496,29 @@ export default function Profile() {
                                 {!isLastOfferByMe ? (
                                   <div className="card-actions-group cols-4">
                                     <button className="toolbar-btn btn-danger" onClick={() => handleReject(bid._id)}>Reject Bid</button>
-                                    <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat")}>Message Freelancer</button>
+                                    <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat", {
+                                      state: {
+                                        gigId: bid.gigId?._id || bid.gigId,
+                                        receiverId: bid.bidderId?._id || bid.bidderId,
+                                        gigTitle: bid.gigId?.title,
+                                        gigPrice: bid.price,
+                                        receiverName: bid.bidderId?.name,
+                                      }
+                                    })}>Message Freelancer</button>
                                     <button className="toolbar-btn btn-primary" onClick={() => handleOpenCounter(bid)}>Counter Offer</button>
                                     <button className="toolbar-btn btn-success" onClick={() => handleAccept(bid._id)}>Accept Bid</button>
                                   </div>
                                 ) : (
                                   <div className="card-actions-group cols-3">
-                                    <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat")}>Message Freelancer</button>
+                                    <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat", {
+                                      state: {
+                                        gigId: bid.gigId?._id || bid.gigId,
+                                        receiverId: bid.bidderId?._id || bid.bidderId,
+                                        gigTitle: bid.gigId?.title,
+                                        gigPrice: bid.price,
+                                        receiverName: bid.bidderId?.name,
+                                      }
+                                    })}>Message Freelancer</button>
                                     <button className="toolbar-btn btn-secondary" onClick={() => setExpandedBidId(expandedBidId === bid._id ? null : bid._id)}>History</button>
                                     <span className="toolbar-label-status flex-grow-label">Awaiting response</span>
                                   </div>
@@ -1449,7 +1527,15 @@ export default function Profile() {
                             ) : bid.status === "payment_pending" ? (
                               <div className="card-actions-group cols-3">
                                 <button className="toolbar-btn btn-danger" onClick={() => handleReject(bid._id)}>Reject Offer</button>
-                                <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat")}>Message Freelancer</button>
+                                <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat", {
+                                  state: {
+                                    gigId: bid.gigId?._id || bid.gigId,
+                                    receiverId: bid.bidderId?._id || bid.bidderId,
+                                    gigTitle: bid.gigId?.title,
+                                    gigPrice: bid.price,
+                                    receiverName: bid.bidderId?.name,
+                                  }
+                                })}>Message Freelancer</button>
                                 <button
                                   className="toolbar-btn btn-success"
                                   onClick={() => bid.gigId?._id && navigate('/checkout', {
@@ -1471,14 +1557,30 @@ export default function Profile() {
                               </div>
                             ) : bid.status === "submitted" ? (
                               <div className="card-actions-group cols-3">
-                                <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat")}>Message Freelancer</button>
+                                <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat", {
+                                  state: {
+                                    gigId: bid.gigId?._id || bid.gigId,
+                                    receiverId: bid.bidderId?._id || bid.bidderId,
+                                    gigTitle: bid.gigId?.title,
+                                    gigPrice: bid.price,
+                                    receiverName: bid.bidderId?.name,
+                                  }
+                                })}>Message Freelancer</button>
                                 <button className="toolbar-btn btn-danger" onClick={() => handleOpenRevisionModal(bid.gigId?._id || bid.gigId)}>Request Revisions</button>
                                 <button className="toolbar-btn btn-success" onClick={() => handleApproveWork(bid.gigId?._id || bid.gigId)}>Approve Work</button>
                               </div>
                             ) : (
                               <div className="card-actions-group cols-3">
                                 <button className="toolbar-btn btn-primary" onClick={() => navigate(`/gig/${bid.gigId?._id}`)}>View Gig</button>
-                                <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat")}>Message Freelancer</button>
+                                <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat", {
+                                  state: {
+                                    gigId: bid.gigId?._id || bid.gigId,
+                                    receiverId: bid.bidderId?._id || bid.bidderId,
+                                    gigTitle: bid.gigId?.title,
+                                    gigPrice: bid.price,
+                                    receiverName: bid.bidderId?.name,
+                                  }
+                                })}>Message Freelancer</button>
                                 <button className="toolbar-btn btn-secondary" onClick={() => setExpandedBidId(expandedBidId === bid._id ? null : bid._id)}>History</button>
                               </div>
                             )}

@@ -4,6 +4,7 @@ import Gig from '../models/gig.js';
 import Notification from '../models/notificationModel.js';
 import { io } from '../server.js';
 import { notifyUser } from '../utils/notifyUser.js';
+import { syncBidToConversation } from "../utils/conversationHelper.js";
 
 export const completeOrder = async (req, res) => {
   try {
@@ -58,9 +59,38 @@ export const completeOrder = async (req, res) => {
 
     bid.status = 'hired';
     await bid.save();
+    await syncBidToConversation(bid, req.userId, {
+      systemMessageText: "You have been hired for this project!"
+    });
+
+    // Sync and notify auto-rejected bids
+    const autoRejectedBids = await Bid.find({
+      gigId,
+      _id: { $ne: bidId },
+      status: { $in: ['pending', 'payment_pending', 'countered'] }
+    }).populate("bidderId", "name");
+
+    for (const rb of autoRejectedBids) {
+      rb.status = 'rejected';
+      await rb.save();
+
+      // Sync status and history to conversation, emitting update socket to sync dashboard in real time
+      await syncBidToConversation(rb);
+
+      // Notify the other bidder via bell notifications
+      await notifyUser({
+        senderId: req.userId,
+        receiverId: rb.bidderId._id,
+        type: "BID_REJECTED",
+        title: "Bid Declined",
+        message: `Your bid on "${gig.title}" was rejected because another freelancer was hired.`,
+        link: "/profile",
+        meta: { role: "freelancer", bidId: rb._id, gigId }
+      });
+    }
 
     await Bid.updateMany(
-      { gigId, _id: { $ne: bidId }, status: { $in: ['pending', 'payment_pending'] } },
+      { gigId, _id: { $ne: bidId }, status: { $in: ['pending', 'payment_pending', 'countered'] } },
       { $set: { status: 'rejected' } }
     );
 

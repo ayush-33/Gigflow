@@ -30,6 +30,7 @@ import savedGigRoutes from "./routes/savedGigRoutes.js";
 import Message from "./models/message.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
+import conversationRoutes from "./routes/conversationRoutes.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -107,6 +108,38 @@ io.on("connection", (socket) => {
       roomId,
       userId: socket.userId,
     });
+
+    try {
+      const Conversation = (await import("./models/conversation.js")).default;
+      const conversation = await Conversation.findOne({ roomId });
+      if (conversation) {
+        const isClient = conversation.clientId.toString() === socket.userId.toString();
+        const role = isClient ? "client" : "freelancer";
+        conversation.unreadCount[role] = 0;
+        await conversation.save();
+
+        // Emit conversationUpdated
+        const eventPayload = {
+          conversationId: conversation._id,
+          roomId: conversation.roomId,
+          lastMessage: conversation.lastMessage,
+          lastMessageAt: conversation.lastMessageAt,
+          unreadCount: conversation.unreadCount,
+          currentBidId: conversation.currentBidId ? {
+            _id: conversation.currentBidId
+          } : null
+        };
+        io.to(conversation.clientId.toString()).emit("conversationUpdated", eventPayload);
+        io.to(conversation.freelancerId.toString()).emit("conversationUpdated", eventPayload);
+
+        // Emit navbarUnreadUpdate
+        const { getUnreadCountForUser } = await import("./utils/conversationHelper.js");
+        const totalUnread = await getUnreadCountForUser(socket.userId);
+        io.to(socket.userId.toString()).emit("navbarUnreadUpdate", { userId: socket.userId, totalUnread });
+      }
+    } catch (e) {
+      console.error("Error in markSeen socket handler:", e.message);
+    }
   });
 
   socket.on("leaveRoom", (roomId) => {
@@ -130,54 +163,39 @@ io.on("connection", (socket) => {
         return socket.emit("messageError", { error: "Message cannot be empty" });
       }
 
-      // Security check: one must be gig owner, other must be bidder
-      const Gig = (await import("./models/gig.js")).default;
-      const Bid = (await import("./models/bid.js")).default;
-
-      const gig = await Gig.findById(gigId);
-      if (!gig) {
-        return socket.emit("messageError", { error: "Gig not found" });
+      const Conversation = (await import("./models/conversation.js")).default;
+      const conversation = await Conversation.findOne({ roomId });
+      if (!conversation) {
+        return socket.emit("messageError", { error: "Conversation not found" });
       }
 
-      const userA = socket.userId.toString();
-      const userB = receiverId.toString();
-
-      const expectedRoomId = [userA, userB].sort().join("_");
-      if (roomId !== expectedRoomId) {
-        return socket.emit("messageError", { error: "Not authorized: invalid room ID for these participants" });
+      // Authorization check
+      const isClient = conversation.clientId.toString() === socket.userId.toString();
+      const isFreelancer = conversation.freelancerId.toString() === socket.userId.toString();
+      if (!isClient && !isFreelancer) {
+        return socket.emit("messageError", { error: "Not authorized: you are not a participant in this conversation" });
       }
 
-      const isUserAOwner = gig.ownerId.toString() === userA;
-      const isUserBOwner = gig.ownerId.toString() === userB;
+      const otherUserId = isClient ? conversation.freelancerId : conversation.clientId;
 
-      if (!isUserAOwner && !isUserBOwner) {
-        return socket.emit("messageError", { error: "Not authorized: one participant must be the gig owner" });
-      }
-
-      const bidderId = isUserAOwner ? userB : userA;
-      const bid = await Bid.findOne({ gigId, bidderId });
-      if (!bid) {
-        return socket.emit("messageError", { error: "Not authorized: freelancer must have bid on this gig" });
-      }
-
-      const receiverSockets = await io.in(receiverId.toString()).fetchSockets();
+      const receiverSockets = await io.in(otherUserId.toString()).fetchSockets();
       const isOnline = receiverSockets.length > 0;
 
       const roomSockets = await io.in(roomId).fetchSockets();
-      const isReceiverInRoom = roomSockets.some(s => s.userId?.toString() === receiverId.toString());
+      const isReceiverInRoom = roomSockets.some(s => s.userId?.toString() === otherUserId.toString());
 
       const initialStatus = isReceiverInRoom ? "read" : (isOnline ? "delivered" : "sent");
-
       const isRead = initialStatus === "read";
       const readAt = isRead ? new Date() : null;
 
       const newMsg = await Message.create({
+        conversationId: conversation._id,
         roomId,
-        gigId,
+        gigId: conversation.gigId,
         senderId: socket.userId,
-        receiverId,
+        receiverId: otherUserId,
         type: type || "text",
-        message,
+        message: message || (type === "offer" ? `I can do this for $${price}` : ""),
         price: price || null,
         offerStatus: type === "offer" ? "pending" : null,
         status: initialStatus,
@@ -189,45 +207,94 @@ io.on("connection", (socket) => {
       await populated.populate("receiverId", "name email");
 
       // Update Bid document if it's a price offer
-      if (type === "offer" && bid) {
-        bid.price = Number(price);
-        bid.status = "countered";
-        bid.lastOfferBy = socket.userId;
-        bid.negotiationHistory.push({
-          price: Number(price),
-          message: message?.trim() || `Proposed a price offer of $${price}`,
-          senderId: socket.userId,
-          timestamp: new Date()
-        });
-        await bid.save();
+      if (type === "offer") {
+        const Bid = (await import("./models/bid.js")).default;
+        let bid;
+        if (conversation.currentBidId) {
+          bid = await Bid.findById(conversation.currentBidId);
+        } else {
+          bid = await Bid.findOne({ gigId: conversation.gigId, bidderId: conversation.freelancerId });
+        }
+
+        if (bid) {
+          bid.price = Number(price);
+          bid.status = "countered";
+          bid.lastOfferBy = socket.userId;
+          bid.negotiationHistory.push({
+            price: Number(price),
+            message: message?.trim() || `Proposed a price offer of $${price}`,
+            senderId: socket.userId,
+            timestamp: new Date()
+          });
+          await bid.save();
+          
+          const { syncBidToConversation } = await import("./utils/conversationHelper.js");
+          await syncBidToConversation(bid);
+        }
       }
+
+      // Update Conversation denormalized preview and unread count
+      conversation.lastMessage = {
+        _id: newMsg._id,
+        type: newMsg.type,
+        message: newMsg.message,
+        price: newMsg.price,
+        offerStatus: newMsg.offerStatus,
+        status: newMsg.status,
+        isRead,
+        readAt,
+        createdAt: newMsg.createdAt,
+        senderId: newMsg.senderId,
+        receiverId: newMsg.receiverId
+      };
+      conversation.lastMessageAt = newMsg.createdAt;
+      
+      const receiverRole = conversation.clientId.toString() === otherUserId.toString() ? "client" : "freelancer";
+      if (!isReceiverInRoom) {
+        conversation.unreadCount[receiverRole] += 1;
+      }
+      await conversation.save();
 
       // ✅ send to chat room
       io.to(roomId).emit("receiveMessage", populated);
 
-      // ✅ send to receiver's personal room for real-time navbar update
-      if (receiverId) {
-        io.to(receiverId.toString()).emit("newMessage", populated);
-      }
+      // ✅ send to receiver's personal room
+      io.to(otherUserId.toString()).emit("newMessage", populated);
 
-      // ✅ send notification to receiver (only for offers / counters, normal text messages only trigger newMessage socket event)
-      if (receiverId && type === "offer") {
+      // ✅ Emit conversationUpdated event
+      const eventPayload = {
+        conversationId: conversation._id,
+        roomId,
+        lastMessage: conversation.lastMessage,
+        lastMessageAt: conversation.lastMessageAt,
+        unreadCount: conversation.unreadCount,
+        currentBidId: conversation.currentBidId ? {
+          _id: conversation.currentBidId
+        } : null
+      };
+      io.to(conversation.clientId.toString()).emit("conversationUpdated", eventPayload);
+      io.to(conversation.freelancerId.toString()).emit("conversationUpdated", eventPayload);
+
+      // ✅ Emit navbarUnreadUpdate for the receiver
+      const { getUnreadCountForUser } = await import("./utils/conversationHelper.js");
+      const totalUnread = await getUnreadCountForUser(otherUserId);
+      io.to(otherUserId.toString()).emit("navbarUnreadUpdate", { userId: otherUserId, totalUnread });
+
+      // ✅ send notification to receiver (only for offers / counters)
+      if (type === "offer") {
         try {
           const senderName = populated.senderId?.name || "Someone";
           const { notifyUser } = await import("./utils/notifyUser.js");
-          const Gig = (await import("./models/gig.js")).default;
-          const gig = await Gig.findById(gigId);
-          const isOwner = gig && gig.ownerId.toString() === receiverId.toString();
-          const role = isOwner ? "client" : "freelancer";
+          const role = receiverRole;
 
           await notifyUser({
             senderId: socket.userId,
-            receiverId,
+            receiverId: otherUserId,
             type: "COUNTER_OFFER_RECEIVED",
             title: "Counter Offer Received",
             message: `${senderName} proposed a price offer of $${price}`,
             link: "/profile",
-            meta: { roomId, gigId, role },
+            meta: { roomId, gigId: conversation.gigId, role },
           });
         } catch (e) {
           console.error("Notification error:", e.message);
@@ -307,6 +374,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/saved-gigs", savedGigRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/conversations", conversationRoutes);
 app.use("/api/orders", orderRoutes);
 
 app.get("/", (req, res) => res.send("GigFlow Backend Running"));
@@ -346,10 +414,9 @@ mongoose.connect(process.env.MONGO_URI)
     process.exit(1);
   });
 
-/* ─────────────────────────
-   🚀 SERVER START
-───────────────────────── */
-const PORT = process.env.PORT || 5000;
-httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== "test") {
+  const PORT = process.env.PORT || 5000;
+  httpServer.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}

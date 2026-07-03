@@ -645,3 +645,44 @@
   font-weight: 700 !important;
   color: var(--chat-text-pri, #ffffff) !important;
 }
+
+/* ── Bid status chip and rebid badge ── */
+.bid-status-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  white-space: nowrap;
+  display: inline-block;
+}
+.bid-status-chip.pending, .bid-status-chip.countered {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+}
+.bid-status-chip.accepted, .bid-status-chip.hired, .bid-status-chip.completed {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+.bid-status-chip.rejected, .bid-status-chip.withdrawn {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+.bid-status-chip.payment_pending {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+}
+
+.bid-rebid-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(139, 92, 246, 0.15);
+  color: #c084fc;
+  line-height: 1.2;
+  white-space: nowrap;
+  display: inline-block;
+}

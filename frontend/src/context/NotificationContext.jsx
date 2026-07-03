@@ -83,7 +83,6 @@ export function NotificationProvider({ children }) {
         return;
       }
 
-      setUnreadMessages((prev) => prev + 1);
       showToast(`${msg.senderId?.name || "Someone"} sent you a message: "${msg.message.slice(0, 40)}${msg.message.length > 40 ? '...' : ''}"`, "message");
     };
 
@@ -91,14 +90,21 @@ export function NotificationProvider({ children }) {
       fetchNotifications();
     };
 
+    const handleNavbarUnreadUpdate = ({ totalUnread }) => {
+      console.log(`[NotificationContext] Received navbarUnreadUpdate count: ${totalUnread}`);
+      setUnreadMessages(totalUnread);
+    };
+
     socket.on("notification", handleNotification);
     socket.on("newMessage", handleNewMessage);
     socket.on("messagesSeen", handleMessagesSeen);
+    socket.on("navbarUnreadUpdate", handleNavbarUnreadUpdate);
 
     return () => {
       socket.off("notification", handleNotification);
       socket.off("newMessage", handleNewMessage);
       socket.off("messagesSeen", handleMessagesSeen);
+      socket.off("navbarUnreadUpdate", handleNavbarUnreadUpdate);
     };
   }, [user, socket, fetchNotifications, showToast]);
 

@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Bid from "../models/bid.js";
 import Gig from "../models/gig.js";
 import { notifyUser } from "../utils/notifyUser.js";
+import { syncBidToConversation, getUnreadCountForUser } from "../utils/conversationHelper.js";
 
 /* ── Validation ── */
 const validateBid = ({ price, message }) => {
@@ -30,13 +31,13 @@ export const createBid = async (req, res) => {
     if (gig.ownerId.toString() === req.userId)
       return res.status(403).json({ message: "You cannot bid on your own gig" });
 
-    const existingActiveBid = await Bid.findOne({
+    const existingPendingBid = await Bid.findOne({
       gigId,
       bidderId: req.userId,
-      status: { $in: ["pending", "countered", "payment_pending", "hired", "in_progress", "submitted", "completed"] }
+      status: "pending"
     });
-    if (existingActiveBid)
-      return res.status(400).json({ message: "You have already placed an active bid on this gig" });
+    if (existingPendingBid)
+      return res.status(400).json({ message: "You already have a pending bid on this gig" });
 
     const bid = await Bid.create({
       gigId,
@@ -55,16 +56,144 @@ export const createBid = async (req, res) => {
 
     const populatedBid = await bid.populate("bidderId", "name");
 
-    if (gig.ownerId) {
-      await notifyUser({
-        senderId: req.userId,
-        receiverId: gig.ownerId,
-        type: "NEW_BID",
-        title: "New Bid Received",
-        message: `You received a new bid from ${populatedBid.bidderId.name}.`,
-        link: `/profile`,
-        meta: { role: "client", bidId: bid._id, gigId: gig._id }
+    // Lookup-or-create Conversation logic
+    const Conversation = (await import("../models/conversation.js")).default;
+    const Message = (await import("../models/message.js")).default;
+    const { io } = await import("../server.js");
+
+    const roomId = [gig.ownerId.toString(), req.userId.toString()].sort().join("_") + "_" + gigId;
+    let conversation = await Conversation.findOne({
+      gigId,
+      clientId: gig.ownerId,
+      freelancerId: req.userId
+    });
+
+    let isNewConversation = false;
+
+    if (!conversation) {
+      isNewConversation = true;
+      conversation = new Conversation({
+        roomId,
+        gigId,
+        clientId: gig.ownerId,
+        freelancerId: req.userId,
+        currentBidId: bid._id,
+        bidHistory: [{
+          bidId: bid._id,
+          price: bid.price,
+          status: bid.status,
+          submittedAt: bid.createdAt || new Date()
+        }],
+        unreadCount: { client: 0, freelancer: 0 }
       });
+      try {
+        await conversation.save();
+      } catch (err) {
+        if (err.code === 11000) {
+          // Handle potential concurrency by loading the existing conversation
+          conversation = await Conversation.findOne({
+            gigId,
+            clientId: gig.ownerId,
+            freelancerId: req.userId
+          });
+          isNewConversation = false;
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    if (!isNewConversation) {
+      // Rebid case:
+      const prevBidId = conversation.currentBidId;
+      let prevPrice = 0;
+      let prevStatus = "unknown";
+      if (prevBidId) {
+        const prevBid = await Bid.findById(prevBidId);
+        if (prevBid) {
+          prevPrice = prevBid.price;
+          prevStatus = prevBid.status;
+        }
+      }
+
+      // Update currentBidId and history
+      conversation.currentBidId = bid._id;
+      conversation.bidHistory.push({
+        bidId: bid._id,
+        price: bid.price,
+        status: bid.status,
+        submittedAt: bid.createdAt || new Date()
+      });
+
+      // Save conversation without system message or unread increment
+      await conversation.save();
+
+      // Create distinct rebid notification for the client
+      if (gig.ownerId) {
+        await notifyUser({
+          senderId: req.userId,
+          receiverId: gig.ownerId,
+          type: "NEW_BID",
+          title: "Bid Resubmitted",
+          message: `${populatedBid.bidderId.name} resubmitted a bid on "${gig.title}" for $${bid.price}`,
+          link: `/profile`,
+          meta: { role: "client", bidId: bid._id, gigId: gig._id }
+        });
+      }
+
+      // Emit Socket.IO events for rebid
+      if (io) {
+        const eventPayload = {
+          conversationId: conversation._id,
+          roomId,
+          lastMessage: conversation.lastMessage,
+          lastMessageAt: conversation.lastMessageAt,
+          unreadCount: conversation.unreadCount,
+          currentBidId: {
+            _id: bid._id,
+            status: bid.status,
+            price: bid.price
+          }
+        };
+        io.to(gig.ownerId.toString()).emit("conversationUpdated", eventPayload);
+        io.to(req.userId).emit("conversationUpdated", eventPayload);
+
+        io.to(gig.ownerId.toString()).emit("bidResubmitted", {
+          conversationId: conversation._id,
+          roomId,
+          gigId,
+          newBidId: bid._id,
+          previousBidId: prevBidId,
+          isNewConversation: false
+        });
+
+        const clientUnread = await getUnreadCountForUser(gig.ownerId);
+        io.to(gig.ownerId.toString()).emit("navbarUnreadUpdate", { userId: gig.ownerId, totalUnread: clientUnread });
+      }
+    } else {
+      // First bid notification and Socket event
+      if (gig.ownerId) {
+        await notifyUser({
+          senderId: req.userId,
+          receiverId: gig.ownerId,
+          type: "NEW_BID",
+          title: "New Bid Received",
+          message: `You received a new bid from ${populatedBid.bidderId.name}.`,
+          link: `/profile`,
+          meta: { role: "client", bidId: bid._id, gigId: gig._id }
+        });
+
+        if (io) {
+          io.to(gig.ownerId.toString()).emit("bidPlaced", {
+            conversationId: conversation._id,
+            roomId,
+            gigId,
+            bidId: bid._id,
+            freelancerId: req.userId,
+            isNewConversation: true
+          });
+        }
+      }
     }
 
     res.status(201).json(populatedBid);
@@ -96,10 +225,8 @@ export const getBidsByGig = async (req, res) => {
 export const checkUserBid = async (req, res) => {
   try {
     const { gigId } = req.params;
-    const bid = await Bid.findOne({ gigId, bidderId: req.userId }).sort({ createdAt: -1 });
-
-    const blockStatuses = ["pending", "countered", "payment_pending", "hired", "in_progress", "submitted", "completed"];
-    const alreadyBid = bid ? blockStatuses.includes(bid.status) : false;
+    const bid = await Bid.findOne({ gigId, bidderId: req.userId, status: "pending" });
+    const alreadyBid = !!bid;
 
     res.json({ alreadyBid, bidStatus: bid ? bid.status : null });
   } catch (error) {
@@ -127,18 +254,19 @@ export const acceptBid = async (req, res) => {
       return res.status(400).json({ message: "You cannot accept your own counter offer/bid." });
     }
 
-    // Guard against race condition: check if any other bid is already payment_pending or hired
+    // Guard against race condition: check if any other bid is already hired
     const conflictingBid = await Bid.findOne({ 
       gigId: gig._id, 
-      status: { $in: ['payment_pending', 'hired'] } 
+      status: 'hired' 
     });
     
     if (conflictingBid) {
-      return res.status(409).json({ message: "Another bid is already being processed or hired for this gig." });
+      return res.status(409).json({ message: "Another freelancer has already been hired for this gig." });
     }
 
     bid.status = "payment_pending";
     await bid.save();
+    await syncBidToConversation(bid);
 
     await notifyUser({
       senderId: req.userId,
@@ -196,6 +324,7 @@ export const rejectBid = async (req, res) => {
 
     bid.status = "rejected";
     await bid.save();
+    await syncBidToConversation(bid);
 
     await notifyUser({
       senderId: req.userId,
@@ -244,6 +373,7 @@ export const withdrawBid = async (req, res) => {
 
     bid.status = "withdrawn";
     await bid.save();
+    await syncBidToConversation(bid);
     res.json({ message: "Bid withdrawn successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -290,6 +420,7 @@ export const counterBid = async (req, res) => {
     });
 
     await bid.save();
+    await syncBidToConversation(bid);
 
     const receiverId = isOwner ? bid.bidderId : gig.ownerId;
     await notifyUser({
