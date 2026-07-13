@@ -1,0 +1,167 @@
+/* ═══════════════════════════════════════
+   SystemMessageCard.css — Scoped CSS for System Workflow Timeline Cards
+   ═══════════════════════════════════════ */
+
+/* Centered container for system messages in the timeline */
+.smc-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 14px 0;
+  box-sizing: border-box;
+  padding: 0 16px;
+}
+
+/* Base card design */
+.smc-card {
+  width: 60%;
+  background: var(--chat-bg-card, #1a1d27);
+  border: 1px solid var(--chat-border, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  animation: smcSlideUpFade 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.smc-card:hover {
+  background: var(--chat-bg-card-hvr, #1e2235);
+}
+
+/* Card slide-in micro-animation */
+@keyframes smcSlideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Left accent borders for semantic color schemes */
+.smc-card.neutral {
+  border-left: 3px solid var(--chat-text-mut, #64748b);
+}
+
+.smc-card.green {
+  border-left: 3px solid var(--chat-success, #10b981);
+}
+
+.smc-card.red {
+  border-left: 3px solid var(--chat-danger, #ef4444);
+}
+
+.smc-card.hired {
+  border-left: 3px solid var(--chat-brand, #3b82f6);
+}
+
+.smc-card.success {
+  border-left: 3px solid var(--chat-success, #10b981);
+}
+
+.smc-card.warning {
+  border-left: 3px solid #f59e0b;
+}
+
+/* Header section */
+.smc-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.smc-icon {
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.smc-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--chat-text-pri, #f1f5f9);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+/* Description section - unmodified raw text */
+.smc-desc {
+  font-size: 12.5px;
+  color: var(--chat-text-sec, #94a3b8);
+  line-height: 1.55;
+  word-break: break-word;
+  margin: 0;
+}
+
+/* Metadata box */
+.smc-meta {
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid var(--chat-border, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 2px;
+  box-sizing: border-box;
+}
+
+.smc-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.smc-meta-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--chat-text-mut, #64748b);
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.smc-meta-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--chat-text-pri, #f1f5f9);
+  margin: 0;
+}
+
+/* Unobtrusive timestamp */
+.smc-time {
+  align-self: flex-end;
+  font-size: 9.5px;
+  color: var(--chat-text-mut, #64748b);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* ── Responsive breakpoints ── */
+@media (max-width: 1024px) {
+  .smc-card {
+    width: 75%;
+  }
+}
+
+@media (max-width: 768px) {
+  .smc-card {
+    width: 90%;
+    padding: 12px 14px;
+    gap: 6px;
+  }
+  .smc-title {
+    font-size: 13px;
+  }
+  .smc-desc {
+    font-size: 12.5px;
+  }
+}

@@ -5,6 +5,7 @@ import { getSocket } from "../utils/socket";
 import api from "../api/api";
 import toast from "react-hot-toast";
 import "../styles/Chat.css";
+import SystemMessageCard from "../components/SystemMessageCard";
 
 /* ── helpers ── */
 function buildRoomId(gigId, userA, userB) {
@@ -95,11 +96,7 @@ function MessageStatus({ status }) {
 /* ── Message bubble ── */
 function MessageBubble({ msg, isMine, onAccept, onReject, onCounter }) {
   if (msg.type === "system") {
-    return (
-      <div className="system-msg">
-        <span>{msg.message}</span>
-      </div>
-    );
+    return <SystemMessageCard msg={msg} />;
   }
 
   if (msg.type === "offer") {
@@ -356,7 +353,7 @@ export default function Chat() {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("receiveMessage", (msg) => {
+    const handleReceiveMessage = (msg) => {
       const active = activeRoomRef.current;
       const currentUser = userRef.current;
       const isFromActiveRoom = msg.roomId === active?.roomId;
@@ -394,9 +391,9 @@ export default function Chat() {
           return room;
         });
       });
-    });
+    };
 
-    socket.on("newMessage", (msg) => {
+    const handleNewMessage = (msg) => {
       const active = activeRoomRef.current;
       const currentUser = userRef.current;
       const isFromActiveRoom = msg.roomId === active?.roomId;
@@ -434,15 +431,15 @@ export default function Chat() {
           return room;
         });
       });
-    });
+    };
 
-    socket.on("bidPlaced", (data) => {
+    const handleBidPlaced = (data) => {
       api.get("/conversations")
         .then(r => setRooms(r.data))
         .catch(() => { });
-    });
+    };
 
-    socket.on("bidResubmitted", (data) => {
+    const handleBidResubmitted = (data) => {
       setRooms(prev => {
         const room = prev.find(r => r.conversationId === data.conversationId || r.roomId === data.roomId);
         if (!room) {
@@ -461,9 +458,9 @@ export default function Chat() {
         };
         return [updatedRoom, ...prev.filter(r => r.roomId !== room.roomId)];
       });
-    });
+    };
 
-    socket.on("conversationUpdated", (data) => {
+    const handleConversationUpdated = (data) => {
       setRooms(prev => {
         const exists = prev.some(r => r.conversationId === data.conversationId || r.roomId === data.roomId);
         if (!exists) {
@@ -507,23 +504,23 @@ export default function Chat() {
           };
         });
       }
-    });
+    };
 
-    socket.on("offerUpdated", ({ messageId, status }) => {
+    const handleOfferUpdated = ({ messageId, status }) => {
       setMessages(prev =>
         prev.map(m => m._id === messageId ? { ...m, offerStatus: status } : m)
       );
-    });
+    };
 
-    socket.on("userTyping", ({ userName }) => {
+    const handleUserTyping = ({ userName }) => {
       setTypingUser(userName || "Someone");
-    });
+    };
 
-    socket.on("userStopTyping", () => {
+    const handleUserStopTyping = () => {
       setTypingUser("");
-    });
+    };
 
-    socket.on('messagesSeen', ({ roomId, userId }) => {
+    const handleMessagesSeen = ({ roomId, userId }) => {
       const active = activeRoomRef.current;
       const currentUser = userRef.current;
       if (roomId === active?.roomId && userId !== resolveUserId(currentUser)) {
@@ -539,9 +536,9 @@ export default function Chat() {
           ? { ...r, unreadCount: 0 }
           : r
       ));
-    });
+    };
 
-    socket.on('messagesDelivered', ({ roomId, receiverId }) => {
+    const handleMessagesDelivered = ({ roomId, receiverId }) => {
       const active = activeRoomRef.current;
       const currentUser = userRef.current;
       if (roomId === active?.roomId) {
@@ -556,19 +553,30 @@ export default function Chat() {
           ? { ...r, lastMessage: { ...r.lastMessage, status: "delivered" } }
           : r
       ));
-    });
+    };
+
+    socket.on("receiveMessage", handleReceiveMessage);
+    socket.on("newMessage", handleNewMessage);
+    socket.on("bidPlaced", handleBidPlaced);
+    socket.on("bidResubmitted", handleBidResubmitted);
+    socket.on("conversationUpdated", handleConversationUpdated);
+    socket.on("offerUpdated", handleOfferUpdated);
+    socket.on("userTyping", handleUserTyping);
+    socket.on("userStopTyping", handleUserStopTyping);
+    socket.on("messagesSeen", handleMessagesSeen);
+    socket.on("messagesDelivered", handleMessagesDelivered);
 
     return () => {
-      socket.off("receiveMessage");
-      socket.off("newMessage");
-      socket.off("offerUpdated");
-      socket.off("userTyping");
-      socket.off("userStopTyping");
-      socket.off("messagesSeen");
-      socket.off("messagesDelivered");
-      socket.off("bidPlaced");
-      socket.off("bidResubmitted");
-      socket.off("conversationUpdated");
+      socket.off("receiveMessage", handleReceiveMessage);
+      socket.off("newMessage", handleNewMessage);
+      socket.off("bidPlaced", handleBidPlaced);
+      socket.off("bidResubmitted", handleBidResubmitted);
+      socket.off("conversationUpdated", handleConversationUpdated);
+      socket.off("offerUpdated", handleOfferUpdated);
+      socket.off("userTyping", handleUserTyping);
+      socket.off("userStopTyping", handleUserStopTyping);
+      socket.off("messagesSeen", handleMessagesSeen);
+      socket.off("messagesDelivered", handleMessagesDelivered);
     };
   }, [socket]);
 

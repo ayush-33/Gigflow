@@ -77,7 +77,7 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: "Incorrect password." });
 
     // ✅ Use the helpers (consistent { id } payload)
-    const accessToken  = generateAccessToken(user._id);
+    const accessToken = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
 
     // ✅ Persist refresh token so refresh/logout can verify it
@@ -97,7 +97,7 @@ export const login = async (req, res) => {
 };
 /* ---------- Refresh Access Token ---------- */
 export const refreshAccessToken = async (req, res) => {
-  console.log("🔄 Token expired, attempting refresh...");  // ← add this
+  // console.log("🔄 Token expired, attempting refresh...");  // ← add this
 
   try {
     const token = req.cookies?.refreshToken;
@@ -119,7 +119,7 @@ export const refreshAccessToken = async (req, res) => {
       return res.status(403).json({ message: "Refresh token revoked or not found" });
 
     // Rotate refresh token (new one each time — limits replay attacks)
-    const newAccessToken  = generateAccessToken(user._id);
+    const newAccessToken = generateAccessToken(user._id);
     const newRefreshToken = generateRefreshToken(user._id);
 
     user.refreshToken = newRefreshToken;

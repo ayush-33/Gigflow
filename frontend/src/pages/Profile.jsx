@@ -417,6 +417,8 @@ export default function Profile() {
     socket.on("newMessage", handleUpdate);
     socket.on("gigDeleted", handleUpdate);
     socket.on("conversationUpdated", handleUpdate);
+    socket.on("bidPlaced", handleUpdate);
+    socket.on("bidResubmitted", handleUpdate);
 
     return () => {
       socket.off("notification", handleUpdate);
@@ -425,6 +427,8 @@ export default function Profile() {
       socket.off("newMessage", handleUpdate);
       socket.off("gigDeleted", handleUpdate);
       socket.off("conversationUpdated", handleUpdate);
+      socket.off("bidPlaced", handleUpdate);
+      socket.off("bidResubmitted", handleUpdate);
     };
   }, [fetchAll, fetchNotifications, socket]);
 

@@ -27,7 +27,13 @@ export const notifyUser = async (data) => {
   if (duplicate) {
     const duplicateTargetEntityId = duplicate.meta?.gigId?.toString() || duplicate.meta?.bidId?.toString() || duplicate.meta?.orderId?.toString() || duplicate.link || "";
     if (duplicateTargetEntityId === targetEntityId) {
-      console.log(`[DEDUPLICATION] Skipping duplicate notification of type: ${type} for receiver: ${resolvedReceiverId}`);
+      console.log(`[DEDUPLICATION] Skipping duplicate notification write of type: ${type} for receiver: ${resolvedReceiverId}. Dispatching real-time socket events.`);
+      const { io } = await import("../server.js");
+      if (io) {
+        const roomStr = resolvedReceiverId.toString();
+        io.to(roomStr).emit("notification", duplicate);
+        io.to(roomStr).emit("newNotification", duplicate);
+      }
       return duplicate;
     }
   }

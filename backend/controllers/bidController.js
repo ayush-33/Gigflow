@@ -266,7 +266,10 @@ export const acceptBid = async (req, res) => {
 
     bid.status = "payment_pending";
     await bid.save();
-    await syncBidToConversation(bid);
+    const systemMsgText = isOwner 
+      ? "Bid accepted — proceeding to payment" 
+      : "Counter offer accepted — proceeding to payment";
+    await syncBidToConversation(bid, req.userId, { systemMessageText: systemMsgText });
 
     await notifyUser({
       senderId: req.userId,
@@ -324,7 +327,8 @@ export const rejectBid = async (req, res) => {
 
     bid.status = "rejected";
     await bid.save();
-    await syncBidToConversation(bid);
+    const systemMsgText = isOwner ? "Bid declined" : "Counter offer declined";
+    await syncBidToConversation(bid, req.userId, { systemMessageText: systemMsgText });
 
     await notifyUser({
       senderId: req.userId,
@@ -420,7 +424,8 @@ export const counterBid = async (req, res) => {
     });
 
     await bid.save();
-    await syncBidToConversation(bid);
+    const systemMsgText = isOwner ? `Client sent a counter offer: $${price}` : `Freelancer sent a counter offer: $${price}`;
+    await syncBidToConversation(bid, req.userId, { systemMessageText: systemMsgText });
 
     const receiverId = isOwner ? bid.bidderId : gig.ownerId;
     await notifyUser({
