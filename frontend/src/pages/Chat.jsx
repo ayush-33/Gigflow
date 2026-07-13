@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { getSocket } from "../utils/socket";
 import api from "../api/api";
+import axios from "axios";
 import toast from "react-hot-toast";
 import "../styles/Chat.css";
 import SystemMessageCard from "../components/SystemMessageCard";
@@ -217,7 +217,7 @@ export default function Chat() {
 
   const messagesEndRef = useRef(null);
   const typingTimer = useRef(null);
-  const socket = getSocket();
+  const { socket } = useAuth();
 
   // Refs for tracking state inside socket event listeners to avoid stale closures
   const activeRoomRef = useRef(activeRoom);
@@ -281,16 +281,22 @@ export default function Chat() {
     }
     if (activeRoom?.roomId === urlRoomId) return;
 
-    api.get(`/conversations/${urlRoomId}`)
+    const controller = new AbortController();
+    api.get(`/conversations/${urlRoomId}`, { signal: controller.signal })
       .then(res => {
         setActiveRoom(res.data);
         setMessages([]);
       })
       .catch(err => {
+        if (axios.isCancel(err)) return;
         console.error("Failed to load conversation details:", err.message);
         setActiveRoom(null);
         setMessages([]);
       });
+
+    return () => {
+      controller.abort();
+    };
   }, [urlRoomId, user]);
 
   /* ── If opened from GigDetails/Profile state navigation ── */
@@ -323,14 +329,26 @@ export default function Chat() {
       setMessages([]);
       return;
     }
+    const controller = new AbortController();
     setLoadingMsgs(true);
     setMessages([]);
-    api.get(`/conversations/${activeRoom.roomId}/messages`)
+    api.get(`/conversations/${activeRoom.roomId}/messages`, { signal: controller.signal })
       .then(r => {
         setMessages(Array.isArray(r.data) ? r.data : []);
       })
-      .catch(() => setMessages([]))
-      .finally(() => setLoadingMsgs(false));
+      .catch((err) => {
+        if (axios.isCancel(err)) return;
+        setMessages([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoadingMsgs(false);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
   }, [activeRoom?.roomId]);
 
   useEffect(() => {
