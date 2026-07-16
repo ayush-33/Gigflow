@@ -379,35 +379,12 @@ app.use("/api/orders", orderRoutes);
 
 app.get("/", (req, res) => res.send("GigFlow Backend Running"));
 
-const normalizeRoomIds = async () => {
-  try {
-    const Message = (await import("./models/message.js")).default;
-    const messages = await Message.find({ roomId: { $regex: /_.*_/ } });
-    if (messages.length > 0) {
-      console.log(`[MIGRATION] Normalizing ${messages.length} messages with 3-part roomIds...`);
-      let count = 0;
-      for (const msg of messages) {
-        const parts = msg.roomId.split("_");
-        if (parts.length === 3) {
-          msg.roomId = [parts[1], parts[2]].sort().join("_");
-          await msg.save();
-          count++;
-        }
-      }
-      console.log(`[MIGRATION] Normalization complete. ${count} messages updated.`);
-    }
-  } catch (err) {
-    console.error("[MIGRATION] Error normalizing room IDs:", err);
-  }
-};
-
 /* ─────────────────────────
    🗄 DATABASE
 ───────────────────────── */
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log("MongoDB connected");
-    normalizeRoomIds();
   })
   .catch(err => {
     console.error(err);

@@ -97,8 +97,6 @@ export const login = async (req, res) => {
 };
 /* ---------- Refresh Access Token ---------- */
 export const refreshAccessToken = async (req, res) => {
-  // console.log("🔄 Token expired, attempting refresh...");  // ← add this
-
   try {
     const token = req.cookies?.refreshToken;
 

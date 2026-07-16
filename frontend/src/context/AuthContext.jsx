@@ -5,6 +5,8 @@ import { connectSocket, disconnectSocket } from "../utils/socket";
 
 const AuthContext = createContext(null);
 
+let restorePromise = null;
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem("user")) || null; }
@@ -17,6 +19,8 @@ export function AuthProvider({ children }) {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
+    let active = true;
+
     const restore = async () => {
       const savedUser = localStorage.getItem("user");
 
@@ -26,7 +30,12 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const { data } = await api.post("/auth/refresh");
+        if (!restorePromise) {
+          restorePromise = api.post("/auth/refresh");
+        }
+        const { data } = await restorePromise;
+
+        if (!active) return;
 
         if (data?.accessToken) {
           setAccessToken(data.accessToken);
@@ -43,17 +52,25 @@ export function AuthProvider({ children }) {
         }
 
       } catch (err) {
-        console.error("Auth restore failed:", err);
-
-        clearAccessToken();
-        localStorage.removeItem("user");
-        setUser(null);
+        if (active) {
+          console.error("Auth restore failed:", err);
+          clearAccessToken();
+          localStorage.removeItem("user");
+          setUser(null);
+        }
       } finally {
-        setAuthReady(true);
+        restorePromise = null;
+        if (active) {
+          setAuthReady(true);
+        }
       }
     };
 
     restore();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const login = (accessToken, userData) => {
@@ -65,7 +82,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    try { await api.post("/auth/logout"); } catch {}
+    try { await api.post("/auth/logout"); } catch { }
     clearAccessToken();
     localStorage.removeItem("user");
     disconnectSocket();
