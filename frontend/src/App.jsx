@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { getAccessToken } from "./utils/auth";
-import { getSocket } from "./utils/socket";
 import { useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -40,25 +39,23 @@ import toast from "react-hot-toast";
 
 
 function App() {
-  const { user } = useAuth();
+  const { user, socket } = useAuth();
   
   useEffect(() => {
-    if (!user) return;
-    const socket = getSocket();
-    if (socket) {
-      socket.emit("register", user._id);
+    if (!user || !socket) return;
+    
+    socket.emit("register", user._id);
 
-      const handleBidHired = (data) => {
-        toast.success(`🎉 ${data.message}`);
-      };
+    const handleBidHired = (data) => {
+      toast.success(`🎉 ${data.message}`);
+    };
 
-      socket.on("bidHired", handleBidHired);
+    socket.on("bidHired", handleBidHired);
 
-      return () => {
-        socket.off("bidHired", handleBidHired);
-      };
-    }
-  }, [user]);
+    return () => {
+      socket.off("bidHired", handleBidHired);
+    };
+  }, [user, socket]);
 
   return (
     <BrowserRouter>

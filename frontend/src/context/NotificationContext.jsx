@@ -1,8 +1,7 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import api from "../api/api";
 import { useAuth } from "./AuthContext";
 import { getAccessToken } from "../utils/auth";
-import { getSocket } from "../utils/socket";
 import toast from "react-hot-toast";
 
 const NotificationContext = createContext();
@@ -115,16 +114,16 @@ export function NotificationProvider({ children }) {
     return () => clearInterval(id);
   }, [fetchNotifications, user]);
 
-  const markOneAsRead = async (id) => {
+  const markOneAsRead = useCallback(async (id) => {
     try {
       await api.put(`/notifications/${id}/read`);
       setNotifications((prev) =>
         prev.map((n) => (n._id === id ? { ...n, isRead: true, read: true } : n))
       );
     } catch { /* silent */ }
-  };
+  }, []);
 
-  const markAllRead = async (role) => {
+  const markAllRead = useCallback(async (role) => {
     try {
       const actualRole = (typeof role === "string") ? role : undefined;
       const url = actualRole ? `/notifications/mark-all-read?role=${actualRole}` : "/notifications/mark-all-read";
@@ -133,35 +132,43 @@ export function NotificationProvider({ children }) {
         prev.map((n) => (actualRole ? n.meta?.role === actualRole : true) ? { ...n, isRead: true, read: true } : n)
       );
     } catch { /* silent */ }
-  };
+  }, []);
 
-  const deleteOne = async (id) => {
+  const deleteOne = useCallback(async (id) => {
     try {
       await api.delete(`/notifications/${id}/delete`);
       setNotifications((prev) => prev.filter((n) => n._id !== id));
     } catch { /* silent */ }
-  };
+  }, []);
 
-  const clearAll = async () => {
+  const clearAll = useCallback(async () => {
     try {
       await api.delete("/notifications/clear-all");
       setNotifications([]);
     } catch { /* silent */ }
-  };
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    notifications,
+    fetchNotifications,
+    markOneAsRead,
+    markAllRead,
+    deleteOne,
+    clearAll,
+    unreadMessages,
+    setUnreadMessages
+  }), [
+    notifications,
+    fetchNotifications,
+    markOneAsRead,
+    markAllRead,
+    deleteOne,
+    clearAll,
+    unreadMessages
+  ]);
 
   return (
-    <NotificationContext.Provider
-      value={{
-        notifications,
-        fetchNotifications,
-        markOneAsRead,
-        markAllRead,
-        deleteOne,
-        clearAll,
-        unreadMessages,
-        setUnreadMessages
-      }}
-    >
+    <NotificationContext.Provider value={contextValue}>
       {children}
     </NotificationContext.Provider>
   );

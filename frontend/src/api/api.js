@@ -15,6 +15,7 @@ const processQueue = (error, token = null) => {
     if (error) prom.reject(error);
     else prom.resolve(token);
   });
+
   failedQueue = [];
 };
 
@@ -46,9 +47,6 @@ api.interceptors.response.use(
     // Token is expired — attempt refresh
     if (original._retry) return Promise.reject(error);
     original._retry = true;
-
-    console.log("🔄 Token expired, attempting refresh...");  // ← add this
-
 
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
