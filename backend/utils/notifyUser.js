@@ -2,7 +2,7 @@ import Notification from "../models/notificationModel.js";
 
 export const notifyUser = async (data) => {
   const { senderId, receiverId, type, title, message, link, meta } = data;
-  
+
   // Backward compatibility support for older calls
   const resolvedReceiverId = receiverId || data.userId;
   const resolvedMessage = message || data.message || data.body;
@@ -11,12 +11,12 @@ export const notifyUser = async (data) => {
 
   // Self-notification / actor-recipient guard
   if (senderId && resolvedReceiverId && senderId.toString() === resolvedReceiverId.toString()) {
-    console.log(`[notifyUser] Skipping self-notification of type: ${type} for user: ${senderId}`);
+
     return null;
   }
 
   // Deduplication check: check if an identical notification exists within the last 60 seconds
-  const targetEntityId = meta?.gigId?.toString() || meta?.bidId?.toString() || meta?.orderId?.toString() || resolvedLink || "";
+  const targetEntityId = meta?.bidId?.toString() || meta?.orderId?.toString() || meta?.gigId?.toString() || resolvedLink || "";
   const sixtySecondsAgo = new Date(Date.now() - 60000);
   const duplicate = await Notification.findOne({
     receiverId: resolvedReceiverId,
@@ -25,9 +25,9 @@ export const notifyUser = async (data) => {
   });
 
   if (duplicate) {
-    const duplicateTargetEntityId = duplicate.meta?.gigId?.toString() || duplicate.meta?.bidId?.toString() || duplicate.meta?.orderId?.toString() || duplicate.link || "";
+    const duplicateTargetEntityId = duplicate.meta?.bidId?.toString() || duplicate.meta?.orderId?.toString() || duplicate.meta?.gigId?.toString() || duplicate.link || "";
     if (duplicateTargetEntityId === targetEntityId) {
-      console.log(`[DEDUPLICATION] Skipping duplicate notification write of type: ${type} for receiver: ${resolvedReceiverId}. Dispatching real-time socket events.`);
+
       const { io } = await import("../server.js");
       if (io) {
         const roomStr = resolvedReceiverId.toString();

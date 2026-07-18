@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, Fragment } from "react";
+import { useEffect, useState, useCallback, Fragment, useRef } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useNotifications } from "../context/NotificationContext";
 import { useAuth } from "../context/AuthContext";
@@ -313,9 +313,10 @@ export default function Profile() {
   const navigate = useNavigate();
 
   // ✅ FIX: context exports fetchNotifications, not refreshNotifications
-  const { fetchNotifications, unreadMessages, notifications, markAllRead } = useNotifications();
+  const { fetchNotifications, unreadMessages, notifications, markAllRead, refreshTrigger } = useNotifications();
   const { user, setUser, socket } = useAuth();
   const unreadNotifications = notifications.filter(n => !n.isRead).length;
+  const inFlightMarkRead = useRef(null);
 
   const [profile, setProfile] = useState(null);
   const [gigs, setGigs] = useState([]);
@@ -402,35 +403,10 @@ export default function Profile() {
     fetchAll();
   }, [fetchAll, location.key]);
 
-  // ✅ Refresh dashboard statistics automatically in real time when socket notifications/messages arrive
+  // ✅ Refresh dashboard statistics automatically in real time when centralized context trigger increments
   useEffect(() => {
-    if (!socket) return;
-
-    const handleUpdate = () => {
-      fetchAll();
-      fetchNotifications();
-    };
-
-    socket.on("notification", handleUpdate);
-    socket.on("newNotification", handleUpdate);
-    socket.on("bidHired", handleUpdate);
-    socket.on("newMessage", handleUpdate);
-    socket.on("gigDeleted", handleUpdate);
-    socket.on("conversationUpdated", handleUpdate);
-    socket.on("bidPlaced", handleUpdate);
-    socket.on("bidResubmitted", handleUpdate);
-
-    return () => {
-      socket.off("notification", handleUpdate);
-      socket.off("newNotification", handleUpdate);
-      socket.off("bidHired", handleUpdate);
-      socket.off("newMessage", handleUpdate);
-      socket.off("gigDeleted", handleUpdate);
-      socket.off("conversationUpdated", handleUpdate);
-      socket.off("bidPlaced", handleUpdate);
-      socket.off("bidResubmitted", handleUpdate);
-    };
-  }, [fetchAll, fetchNotifications, socket]);
+    fetchAll();
+  }, [fetchAll, refreshTrigger]);
 
   useEffect(() => {
     if (location.state?.tab) {
@@ -444,13 +420,19 @@ export default function Profile() {
   useEffect(() => {
     if (activeTab === "offers") {
       const hasUnread = notifications.some(n => !n.isRead && n.meta?.role === "client");
-      if (hasUnread) {
-        markAllRead("client");
+      if (hasUnread && inFlightMarkRead.current !== "client") {
+        inFlightMarkRead.current = "client";
+        markAllRead("client").finally(() => {
+          inFlightMarkRead.current = null;
+        });
       }
     } else if (activeTab === "bids") {
       const hasUnread = notifications.some(n => !n.isRead && n.meta?.role === "freelancer");
-      if (hasUnread) {
-        markAllRead("freelancer");
+      if (hasUnread && inFlightMarkRead.current !== "freelancer") {
+        inFlightMarkRead.current = "freelancer";
+        markAllRead("freelancer").finally(() => {
+          inFlightMarkRead.current = null;
+        });
       }
     }
   }, [activeTab, notifications, markAllRead]);

@@ -42,6 +42,8 @@ export function NotificationProvider({ children }) {
     }
   }, [user]);
 
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
   // Connect socket when user logs in, disconnect on logout
   useEffect(() => {
     if (!user || !getAccessToken()) {
@@ -54,6 +56,10 @@ export function NotificationProvider({ children }) {
 
     if (!socket) return;
 
+    const triggerDashboardRefresh = () => {
+      setRefreshTrigger((prev) => prev + 1);
+    };
+
     const handleNotification = (newNotif) => {
       // Guard: do not show toast or append to notification array if current user is the sender (actor)
       const senderIdStr = newNotif.senderId?._id?.toString() || newNotif.senderId?.toString();
@@ -62,8 +68,15 @@ export function NotificationProvider({ children }) {
         console.log("[NotificationContext] Bypassing self-notification from socket");
         return;
       }
+
+      // Guard: skip showing notification toasts if the user is already on the relevant chat screen
+      if (newNotif.meta?.roomId && window.location.pathname === `/chat/${newNotif.meta.roomId}`) {
+        return;
+      }
+
       setNotifications((prev) => [newNotif, ...prev]);
       showToast(newNotif.message || newNotif.body || "New notification!", "notification");
+      triggerDashboardRefresh();
     };
 
     const handleNewMessage = (msg) => {
@@ -82,6 +95,12 @@ export function NotificationProvider({ children }) {
         return;
       }
 
+      // Suppress duplicate chat toast for counter-offer system messages
+      // since notifyUser will emit a formal COUNTER_OFFER_RECEIVED notification
+      if (msg.type === "offer" || msg.type === "system") {
+        return;
+      }
+
       showToast(`${msg.senderId?.name || "Someone"} sent you a message: "${msg.message.slice(0, 40)}${msg.message.length > 40 ? '...' : ''}"`, "message");
     };
 
@@ -94,16 +113,29 @@ export function NotificationProvider({ children }) {
       setUnreadMessages(totalUnread);
     };
 
+    const handleGenericUpdate = () => {
+      fetchNotifications();
+      triggerDashboardRefresh();
+    };
+
     socket.on("notification", handleNotification);
     socket.on("newMessage", handleNewMessage);
     socket.on("messagesSeen", handleMessagesSeen);
     socket.on("navbarUnreadUpdate", handleNavbarUnreadUpdate);
+    socket.on("bidHired", handleGenericUpdate);
+    socket.on("bidPlaced", handleGenericUpdate);
+    socket.on("bidResubmitted", handleGenericUpdate);
+    socket.on("gigDeleted", handleGenericUpdate);
 
     return () => {
       socket.off("notification", handleNotification);
       socket.off("newMessage", handleNewMessage);
       socket.off("messagesSeen", handleMessagesSeen);
       socket.off("navbarUnreadUpdate", handleNavbarUnreadUpdate);
+      socket.off("bidHired", handleGenericUpdate);
+      socket.off("bidPlaced", handleGenericUpdate);
+      socket.off("bidResubmitted", handleGenericUpdate);
+      socket.off("gigDeleted", handleGenericUpdate);
     };
   }, [user, socket, fetchNotifications, showToast]);
 
@@ -156,7 +188,8 @@ export function NotificationProvider({ children }) {
     deleteOne,
     clearAll,
     unreadMessages,
-    setUnreadMessages
+    setUnreadMessages,
+    refreshTrigger
   }), [
     notifications,
     fetchNotifications,
@@ -164,7 +197,8 @@ export function NotificationProvider({ children }) {
     markAllRead,
     deleteOne,
     clearAll,
-    unreadMessages
+    unreadMessages,
+    refreshTrigger
   ]);
 
   return (

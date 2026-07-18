@@ -328,6 +328,10 @@ io.on("connection", (socket) => {
         type: "offer",
         message: `Your offer was ${status}`,
       });
+      io.to(msg.senderId.toString()).emit("notification", {
+        type: "offer",
+        message: `Your offer was ${status}`,
+      });
 
     } catch (err) {
       socket.emit("messageError", { error: err.message });
