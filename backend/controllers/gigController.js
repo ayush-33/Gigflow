@@ -2,6 +2,7 @@ import Gig from "../models/gig.js";
 import Bid from "../models/bid.js";
 import { notifyUser } from "../utils/notifyUser.js";
 import { io } from "../server.js";
+import { syncBidToConversation } from "../utils/conversationHelper.js";
 
 /* ── Helper: sanitise image path ── */
 // Ensures we ONLY store the filename (e.g. "abc123.jpg") in the DB.
@@ -238,6 +239,7 @@ export const startWork = async (req, res) => {
 
     bid.status = "in_progress";
     await bid.save();
+    await syncBidToConversation(bid, req.userId, { systemMessageText: "Freelancer started work." });
 
     // Notify client
     await notifyUser({
@@ -282,6 +284,8 @@ export const submitWork = async (req, res) => {
     bid.status = "submitted";
     bid.revisionNotes = ""; // Clear active revision notes on resubmission
     await bid.save();
+    const msgText = isRevision ? "Freelancer resubmitted work for review." : "Freelancer submitted work for approval.";
+    await syncBidToConversation(bid, req.userId, { systemMessageText: msgText });
 
     // Notify client
     await notifyUser({
@@ -325,6 +329,7 @@ export const approveWork = async (req, res) => {
     bid.status = "completed";
     bid.revisionNotes = ""; // Clear active notes on approval too
     await bid.save();
+    await syncBidToConversation(bid, req.userId, { systemMessageText: "Client approved work. Project completed." });
 
     // Notify freelancer
     await notifyUser({
@@ -376,6 +381,7 @@ export const requestChanges = async (req, res) => {
       timestamp: new Date()
     });
     await bid.save();
+    await syncBidToConversation(bid, req.userId, { systemMessageText: "Client requested revisions." });
 
     // Notify freelancer
     await notifyUser({

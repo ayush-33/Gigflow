@@ -213,7 +213,7 @@ export default function Chat() {
   const [offerNote, setOfferNote] = useState("");
   const [typing, setTyping] = useState(false);
   const [typingUser, setTypingUser] = useState("");
-  const [showHistory, setShowHistory] = useState(false);
+
 
   const messagesEndRef = useRef(null);
   const typingTimer = useRef(null);
@@ -781,70 +781,7 @@ export default function Chat() {
                 </div>
               </div>
 
-              {activeRoom.bidHistory && activeRoom.bidHistory.length > 0 && (
-                <button
-                  className="toolbar-btn btn-purple"
-                  style={{
-                    padding: "6px 12px",
-                    fontSize: "12px",
-                    borderRadius: "6px",
-                    background: "rgba(139, 92, 246, 0.15)",
-                    border: "1px solid rgba(139, 92, 246, 0.3)",
-                    color: "#c084fc",
-                    cursor: "pointer",
-                    zIndex: 10,
-                    width: "fit-content"
-                  }}
-                  onClick={() => setShowHistory(!showHistory)}
-                >
-                  📜 History ({activeRoom.bidHistory.length})
-                </button>
-              )}
 
-              {/* Collapsible Floating Bid History Panel */}
-              {showHistory && activeRoom.bidHistory && activeRoom.bidHistory.length > 0 && (
-                <div className="bid-history-panel" style={{
-                  position: "absolute",
-                  top: "72px",
-                  right: "24px",
-                  width: "250px",
-                  background: "var(--chat-bg-sidebar)",
-                  border: "1px solid var(--chat-border)",
-                  borderRadius: "12px",
-                  boxShadow: "0 12px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)",
-                  padding: "16px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                  maxHeight: "250px",
-                  overflowY: "auto",
-                  zIndex: 100
-                }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "8px", marginBottom: "4px" }}>
-                    <h4 style={{ margin: 0, fontSize: "13px", fontWeight: "700", color: "var(--chat-text-pri)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Proposal & Bid History</h4>
-                  </div>
-                  {activeRoom.bidHistory.map((bidItem, idx) => (
-                    <div key={idx} className="bid-history-item" style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      fontSize: "12.5px",
-                      background: "rgba(255, 255, 255, 0.02)",
-                      padding: "8px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid rgba(255, 255, 255, 0.04)"
-                    }}>
-                      <span style={{ fontWeight: "600", color: "var(--chat-text-pri)" }}>Attempt #{idx + 1}: ${bidItem.price}</span>
-                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                        <span className={`bid-status-chip ${bidItem.status}`}>{bidItem.status}</span>
-                        <span style={{ fontSize: "11px", color: "var(--chat-text-mut)" }}>
-                          {new Date(bidItem.submittedAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Messages */}

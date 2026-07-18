@@ -334,7 +334,7 @@ export default function Profile() {
   const [counterPrice, setCounterPrice] = useState("");
   const [counterMessage, setCounterMessage] = useState("");
   const [isCountering, setIsCountering] = useState(false);
-  const [expandedBidId, setExpandedBidId] = useState(null);
+
 
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
@@ -460,6 +460,7 @@ export default function Profile() {
       onConfirm: async () => {
         try {
           const { data } = await api.put(`/bids/accept/${id}`);
+          await fetchAll();
           navigate('/checkout', {
             state: {
               gig: {
@@ -1125,44 +1126,59 @@ export default function Profile() {
                 <div className="my-gigs-grid">
                   {filteredBids.map((bid) => {
                     const isLastOfferByMe = bid.lastOfferBy === user?._id || bid.lastOfferBy === profile?._id;
-
-                    // Compute chronological unified timeline events
-                    const negotiationEvents = (bid.negotiationHistory || []).map(h => ({
-                      ...h,
-                      type: "negotiation",
-                      date: new Date(h.timestamp)
-                    }));
-                    const revisionEvents = (bid.revisionHistory || []).map(h => ({
-                      ...h,
-                      type: "revision",
-                      date: new Date(h.timestamp)
-                    }));
-                    const timelineEvents = [...negotiationEvents, ...revisionEvents].sort((a, b) => a.date - b.date);
-
                     return (
                       <div className="bid-card-new premium-dashboard-card" key={bid._id}>
                         {/* Header */}
+                        {/* Header */}
                         <div className="card-header-section">
-                          <div className="card-title-badges-row">
-                            <div className="bid-card-client-row">
-                              <div className="client-avatar-mini">
-                                {bid.gigId?.ownerId?.name?.charAt(0).toUpperCase() || "C"}
-                              </div>
-                              <span className="client-name-text">
-                                Client: <strong>{bid.gigId?.ownerId?.name || "Client"}</strong>
-                              </span>
-                            </div>
-                            <Badge status={bid.status} />
-                          </div>
-                          <h3
-                            className="card-title-clamp-2"
-                            onClick={() => bid.gigId?._id && navigate(`/gig/${bid.gigId._id}`)}
-                            title={bid.gigId?.title || "—"}
-                          >
-                            {bid.gigId?.title || "—"}
-                          </h3>
-                        </div>
 
+                          <div className="received-bid-header">
+
+                            <div className="freelancer-profile-row">
+
+                              <div className="freelancer-avatar-large">
+                                {bid.gigId?.ownerId?.name
+                                  ? bid.gigId.ownerId.name.charAt(0).toUpperCase()
+                                  : "C"}
+                              </div>
+
+                              <div className="freelancer-info-block">
+
+                                <h3 className="freelancer-name">
+                                  {bid.gigId?.ownerId?.name || "Client"}
+                                </h3>
+
+                                <div className="freelancer-meta-row">
+                                  <span>🧑 Client</span>
+                                </div>
+
+                              </div>
+
+                            </div>
+
+                            <Badge status={bid.status} />
+
+                          </div>
+
+                          <span
+                            className="bid-card-title-link"
+                            style={{
+                              marginTop: "18px",
+                              display: "block",
+                              fontSize: "13.5px",
+                              color: "var(--text-muted)"
+                            }}
+                          >
+                            Project:&nbsp;
+                            <strong
+                              className="gig-link"
+                              onClick={() => navigate(`/gig/${bid.gigId?._id}`)}
+                            >
+                              {bid.gigId?.title || "—"}
+                            </strong>
+                          </span>
+
+                        </div>
                         {/* Content */}
                         <div className="card-content-section">
                           <div className="bid-card-details-grid">
@@ -1212,6 +1228,7 @@ export default function Profile() {
                                 </div>
                               ) : (
                                 <div className="card-actions-group cols-3">
+                                  <button className="toolbar-btn btn-primary" onClick={() => bid.gigId?._id && navigate(`/gig/${bid.gigId._id}`)}>View Gig</button>
                                   <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat", {
                                     state: {
                                       gigId: bid.gigId?._id || bid.gigId,
@@ -1221,7 +1238,6 @@ export default function Profile() {
                                       receiverName: bid.gigId?.ownerId?.name,
                                     }
                                   })}>Message Client</button>
-                                  <button className="toolbar-btn btn-secondary" onClick={() => setExpandedBidId(expandedBidId === bid._id ? null : bid._id)}>History</button>
                                   <button className="toolbar-btn btn-danger" onClick={() => handleWithdraw(bid._id)}>Withdraw Bid</button>
                                 </div>
                               )}
@@ -1260,7 +1276,7 @@ export default function Profile() {
                                 api.put(`/gigs/${bid.gigId?._id || bid.gigId}/submit-work`)
                                   .then(() => { fetchAll(); toast.success("Work submitted! ✅"); })
                                   .catch(err => toast.error(err.response?.data?.message || "Submit failed"));
-                              }}>Submit Work</button>
+                              }}>{bid.revisionNotes ? "Submit Revised Work" : "Submit Work"}</button>
                             </div>
                           ) : bid.status === "completed" ? (
                             <div className="card-actions-group cols-3">
@@ -1276,7 +1292,7 @@ export default function Profile() {
                               })}>Message Client</button>
                               <button className="toolbar-btn btn-success" onClick={() => bid.gigId?._id && navigate(`/gig/${bid.gigId._id}`)}>Leave Review</button>
                             </div>
-                          ) : (
+                          ) : bid.status === "payment_pending" ? (
                             <div className="card-actions-group cols-3">
                               <button className="toolbar-btn btn-primary" onClick={() => bid.gigId?._id && navigate(`/gig/${bid.gigId._id}`)}>View Gig</button>
                               <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat", {
@@ -1288,36 +1304,23 @@ export default function Profile() {
                                   receiverName: bid.gigId?.ownerId?.name,
                                 }
                               })}>Message Client</button>
-                              <button className="toolbar-btn btn-secondary" onClick={() => setExpandedBidId(expandedBidId === bid._id ? null : bid._id)}>History</button>
+                              <button className="toolbar-btn btn-danger" onClick={() => handleWithdraw(bid._id)}>Withdraw Bid</button>
+                            </div>
+                          ) : (
+                            <div className="card-actions-group cols-2">
+                              <button className="toolbar-btn btn-primary" onClick={() => bid.gigId?._id && navigate(`/gig/${bid.gigId._id}`)}>View Gig</button>
+                              <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat", {
+                                state: {
+                                  gigId: bid.gigId?._id || bid.gigId,
+                                  receiverId: bid.gigId?.ownerId?._id || bid.gigId?.ownerId,
+                                  gigTitle: bid.gigId?.title,
+                                  gigPrice: bid.price,
+                                  receiverName: bid.gigId?.ownerId?.name,
+                                }
+                              })}>Message Client</button>
                             </div>
                           )}
                         </div>
-
-                        {/* Timeline steppers dropdown */}
-                        {expandedBidId === bid._id && (
-                          <div className="bid-card-history">
-                            <h4 className="history-title">⚖️ Negotiation Timeline</h4>
-                            <div className="history-timeline">
-                              {timelineEvents.map((event, idx) => {
-                                const isMe = event.senderId === user?._id || event.senderId === profile?._id;
-                                let eventTitle = event.type === "revision" ? "Revision Requested" : isMe ? `You countered` : `Client countered`;
-                                const priceStr = event.price ? `$${event.price}` : "";
-                                return (
-                                  <div key={idx} className="timeline-item">
-                                    <div className={`timeline-dot ${event.type}`} />
-                                    <div className="timeline-content">
-                                      <div className="timeline-header">
-                                        <span className="timeline-title-text">{eventTitle} {priceStr}</span>
-                                        <span className="timeline-time">{new Date(event.timestamp || event.date).toLocaleDateString()}</span>
-                                      </div>
-                                      {event.message && <p className="timeline-message">{event.message}</p>}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     );
                   })}
@@ -1399,19 +1402,6 @@ export default function Profile() {
                     {filteredOffers.map((bid) => {
                       const isLastOfferByMe = bid.lastOfferBy === user?._id || bid.lastOfferBy === profile?._id;
                       const freelancerInitials = bid.bidderId?.name ? bid.bidderId.name.charAt(0).toUpperCase() : "?";
-
-                      // Compute chronological unified timeline events
-                      const negotiationEvents = (bid.negotiationHistory || []).map(h => ({
-                        ...h,
-                        type: "negotiation",
-                        date: new Date(h.timestamp)
-                      }));
-                      const revisionEvents = (bid.revisionHistory || []).map(h => ({
-                        ...h,
-                        type: "revision",
-                        date: new Date(h.timestamp)
-                      }));
-                      const timelineEvents = [...negotiationEvents, ...revisionEvents].sort((a, b) => a.date - b.date);
 
                       return (
                         <div className="bid-card-new received-bid-card premium-dashboard-card" key={bid._id}>
@@ -1495,7 +1485,7 @@ export default function Profile() {
                                     <button className="toolbar-btn btn-success" onClick={() => handleAccept(bid._id)}>Accept Bid</button>
                                   </div>
                                 ) : (
-                                  <div className="card-actions-group cols-3">
+                                  <div className="card-actions-group cols-2">
                                     <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat", {
                                       state: {
                                         gigId: bid.gigId?._id || bid.gigId,
@@ -1505,14 +1495,12 @@ export default function Profile() {
                                         receiverName: bid.bidderId?.name,
                                       }
                                     })}>Message Freelancer</button>
-                                    <button className="toolbar-btn btn-secondary" onClick={() => setExpandedBidId(expandedBidId === bid._id ? null : bid._id)}>History</button>
                                     <span className="toolbar-label-status flex-grow-label">Awaiting response</span>
                                   </div>
                                 )}
                               </>
                             ) : bid.status === "payment_pending" ? (
-                              <div className="card-actions-group cols-3">
-                                <button className="toolbar-btn btn-danger" onClick={() => handleReject(bid._id)}>Reject Offer</button>
+                              <div className="card-actions-group cols-2">
                                 <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat", {
                                   state: {
                                     gigId: bid.gigId?._id || bid.gigId,
@@ -1556,7 +1544,7 @@ export default function Profile() {
                                 <button className="toolbar-btn btn-success" onClick={() => handleApproveWork(bid.gigId?._id || bid.gigId)}>Approve Work</button>
                               </div>
                             ) : (
-                              <div className="card-actions-group cols-3">
+                              <div className="card-actions-group cols-2">
                                 <button className="toolbar-btn btn-primary" onClick={() => navigate(`/gig/${bid.gigId?._id}`)}>View Gig</button>
                                 <button className="toolbar-btn btn-purple" onClick={() => navigate("/chat", {
                                   state: {
@@ -1567,7 +1555,6 @@ export default function Profile() {
                                     receiverName: bid.bidderId?.name,
                                   }
                                 })}>Message Freelancer</button>
-                                <button className="toolbar-btn btn-secondary" onClick={() => setExpandedBidId(expandedBidId === bid._id ? null : bid._id)}>History</button>
                               </div>
                             )}
                           </div>

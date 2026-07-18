@@ -14,7 +14,15 @@ const EVENT_MAP = {
   project_started: { icon: "📦", title: "Project Started", color: "hired" },
   project_completed: { icon: "🏁", title: "Project Completed", color: "success" },
   order_cancelled: { icon: "🚫", title: "Order Cancelled", color: "red" },
-  review_received: { icon: "🌟", title: "Review Received", color: "success" }
+  review_received: { icon: "🌟", title: "Review Received", color: "success" },
+
+  // New milestone mappings:
+  proposal_withdrawn: { icon: "🚫", title: "Proposal Withdrawn", color: "red" },
+  work_started: { icon: "🔨", title: "Work Started", color: "hired" },
+  work_submitted: { icon: "📤", title: "Work Submitted", color: "neutral" },
+  revisions_requested: { icon: "🔄", title: "Revisions Requested", color: "neutral" },
+  work_resubmitted: { icon: "🔄", title: "Work Resubmitted", color: "neutral" },
+  work_approved: { icon: "🏁", title: "Work Approved", color: "success" }
 };
 
 const REGEX_RULES = [
@@ -32,7 +40,16 @@ const REGEX_RULES = [
   { pattern: /bid submitted/i, type: "bid_submitted" },
   { pattern: /payment completed/i, type: "payment_completed" },
   { pattern: /payment received/i, type: "payment_completed" },
-  { pattern: /review received/i, type: "review_received" }
+  { pattern: /review received/i, type: "review_received" },
+
+  // New regular expression rules matching the six new milestone notification patterns:
+  { pattern: /Freelancer withdrew/i, type: "proposal_withdrawn" },
+  { pattern: /Bid has been withdrawn/i, type: "proposal_withdrawn" },
+  { pattern: /Freelancer started work/i, type: "work_started" },
+  { pattern: /Freelancer submitted work for approval/i, type: "work_submitted" },
+  { pattern: /Client requested revisions/i, type: "revisions_requested" },
+  { pattern: /Freelancer resubmitted work/i, type: "work_resubmitted" },
+  { pattern: /Client approved work\. Project completed/i, type: "work_approved" }
 ];
 
 const extractPrice = (text) => {

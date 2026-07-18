@@ -359,8 +359,11 @@ export const withdrawBid = async (req, res) => {
     if (bid.bidderId._id.toString() !== req.userId)
       return res.status(403).json({ message: "Not authorized" });
 
-    if (bid.status !== "pending")
+    if (bid.status !== "pending" && bid.status !== "payment_pending" && bid.status !== "countered")
       return res.status(400).json({ message: "Cannot withdraw a bid that has already been actioned." });
+
+    if (bid.status === "countered" && bid.lastOfferBy?.toString() !== req.userId)
+      return res.status(400).json({ message: "Cannot withdraw a counter offer proposed by the client." });
 
     const gig = await Gig.findById(bid.gigId);
     if (gig?.ownerId) {
@@ -377,7 +380,7 @@ export const withdrawBid = async (req, res) => {
 
     bid.status = "withdrawn";
     await bid.save();
-    await syncBidToConversation(bid);
+    await syncBidToConversation(bid, req.userId, { systemMessageText: "Freelancer withdrew their proposal." });
     res.json({ message: "Bid withdrawn successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });

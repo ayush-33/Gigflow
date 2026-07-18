@@ -42,8 +42,16 @@ export const getMyGigs = async (req, res) => {
 export const getMyBids = async (req, res) => {
   try {
     const bids = await Bid.find({ bidderId: req.userId })
-      .populate("gigId", "title price status ownerId")
+      .populate({
+        path: "gigId",
+        select: "title price status deliveryTime image ownerId",
+        populate: {
+          path: "ownerId",
+          select: "name"
+        }
+      })
       .sort({ createdAt: -1 });
+
     res.json(bids);
   } catch (err) {
     res.status(500).json({ message: err.message });
