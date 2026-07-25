@@ -763,7 +763,7 @@ export default function Chat() {
             {/* Header */}
             <div className="chat-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", position: "relative" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                <button className="chat-back-btn" onClick={() => setActiveRoom(null)}>←</button>
+                <button className="chat-back-btn" onClick={() => navigate("/chat")}>←</button>
                 <div className="chat-header-info">
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                     <h3 className="chat-header-project-title" style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "var(--chat-text-pri)" }}>

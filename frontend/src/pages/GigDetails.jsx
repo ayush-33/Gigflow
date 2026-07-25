@@ -4,20 +4,11 @@ import api from "../api/api";
 import ReviewSection from "../components/ReviewSection";
 import { useAuth } from "../context/AuthContext";
 import ConfirmModal from "../components/ConfirmModal";
+import StarRating from "../components/StarRating";
+import Modal from "../components/Modal";
 import toast from "react-hot-toast";
 
 import "../styles/GigDetails.css";
-
-function StarRating({ score = 4.5 }) {
-  const full  = Math.floor(score);
-  const half  = score % 1 >= 0.5 ? 1 : 0;
-  const empty = 5 - full - half;
-  return (
-    <span className="stars">
-      {"★".repeat(full)}{half ? "½" : ""}{"☆".repeat(empty)}
-    </span>
-  );
-}
 
 export default function GigDetails() {
   const { id }   = useParams();
@@ -461,32 +452,31 @@ const reviewCount = gig.reviewCount || 0;
 
       <ConfirmModal modal={modal} onClose={() => setModal(null)} />
 
-      {showRevisionModal && (
-        <div className="modal-overlay" onClick={() => setShowRevisionModal(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px' }}>
-            <div className="modal-title">Request Revisions</div>
-            <form onSubmit={handleRevisionSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '12px' }}>
-              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '13px', fontWeight: '600' }}>Revision Notes / Required Changes</label>
-                <textarea
-                  style={{ padding: '10px', width: '100%', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: 'inherit' }}
-                  rows={6}
-                  placeholder="Describe the changes or adjustments you need the freelancer to make..."
-                  value={revisionNotes}
-                  onChange={(e) => setRevisionNotes(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
-                <button type="button" className="btn-secondary" style={{ padding: '10px 20px', borderRadius: '8px' }} onClick={() => setShowRevisionModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary btn-danger" style={{ padding: '10px 20px', borderRadius: '8px' }} disabled={isSubmittingRevision}>
-                  {isSubmittingRevision ? "Sending..." : "Request Changes"}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showRevisionModal}
+        onClose={() => setShowRevisionModal(false)}
+        title="Request Revisions"
+      >
+        <form onSubmit={handleRevisionSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '13px', fontWeight: '600' }}>Revision Notes / Required Changes</label>
+            <textarea
+              style={{ padding: '10px', width: '100%', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: 'inherit' }}
+              rows={6}
+              placeholder="Describe the changes or adjustments you need the freelancer to make..."
+              value={revisionNotes}
+              onChange={(e) => setRevisionNotes(e.target.value)}
+              required
+            />
           </div>
-        </div>
-      )}
+          <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+            <button type="button" className="btn-secondary" style={{ padding: '10px 20px', borderRadius: '8px' }} onClick={() => setShowRevisionModal(false)}>Cancel</button>
+            <button type="submit" className="btn-primary btn-danger" style={{ padding: '10px 20px', borderRadius: '8px' }} disabled={isSubmittingRevision}>
+              {isSubmittingRevision ? "Sending..." : "Request Changes"}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

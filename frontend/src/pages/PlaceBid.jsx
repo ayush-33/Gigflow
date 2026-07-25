@@ -116,12 +116,13 @@ export default function PlaceBid() {
 
             {/* Price field */}
             <div className={`bid-field${focused === "price" ? " bid-field--focused" : ""}`}>
-              <label className="bid-label">
+              <label className="bid-label" htmlFor="price">
                 Your bid price <span className="bid-required">*</span>
               </label>
               <div className="bid-price-wrap">
                 <span className="bid-price-symbol">$</span>
                 <input
+                  id="price"
                   className={`bid-input bid-input--price${errors.price ? " bid-input--error" : ""}`}
                   type="number"
                   placeholder="Enter your offer"
@@ -149,10 +150,11 @@ export default function PlaceBid() {
 
             {/* Message field */}
             <div className={`bid-field${focused === "message" ? " bid-field--focused" : ""}`}>
-              <label className="bid-label">
+              <label className="bid-label" htmlFor="message">
                 Proposal message <span className="bid-required">*</span>
               </label>
               <textarea
+                id="message"
                 className={`bid-textarea${errors.message ? " bid-input--error" : ""}`}
                 placeholder="Explain your approach, timeline, relevant experience, and why you're the right fit…"
                 value={message}

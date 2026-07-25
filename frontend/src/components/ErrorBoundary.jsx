@@ -66,35 +66,13 @@ export default class ErrorBoundary extends React.Component {
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             <button
               onClick={this.handleReset}
-              style={{
-                padding: '10px 20px',
-                background: '#3b82f6',
-                border: 'none',
-                borderRadius: '8px',
-                color: '#fff',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'background 0.2s'
-              }}
-              onMouseOver={(e) => e.target.style.background = '#60a5fa'}
-              onMouseOut={(e) => e.target.style.background = '#3b82f6'}
+              className="btn-primary"
             >
               Try Again
             </button>
             <button
               onClick={() => window.location.reload()}
-              style={{
-                padding: '10px 20px',
-                background: 'transparent',
-                border: '1px solid rgba(255,255,255,0.15)',
-                borderRadius: '8px',
-                color: '#94a3b8',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'background 0.2s'
-              }}
-              onMouseOver={(e) => e.target.style.background = 'rgba(255,255,255,0.05)'}
-              onMouseOut={(e) => e.target.style.background = 'transparent'}
+              className="btn-secondary"
             >
               Reload Page
             </button>

@@ -155,10 +155,11 @@ export default function BecomeSeller() {
                 <div className="form-section-label">Gig Identity</div>
 
                 <div className="form-group">
-                  <label className="form-label">
+                  <label className="form-label" htmlFor="gigTitle">
                     Gig Title <span className="required">*</span>
                   </label>
                   <input
+                    id="gigTitle"
                     className={`form-input${errors.gigTitle ? " input-error" : ""}`}
                     name="gigTitle"
                     value={form.gigTitle}
@@ -174,10 +175,11 @@ export default function BecomeSeller() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">
+                  <label className="form-label" htmlFor="category">
                     Category <span className="required">*</span>
                   </label>
                   <select
+                    id="category"
                     className={`form-select${errors.category ? " input-error" : ""}`}
                     name="category"
                     value={form.category}
@@ -205,10 +207,11 @@ export default function BecomeSeller() {
                 <div className="form-section-label">Gig Details</div>
 
                 <div className="form-group">
-                  <label className="form-label">
+                  <label className="form-label" htmlFor="description">
                     Description <span className="required">*</span>
                   </label>
                   <textarea
+                    id="description"
                     className={`form-textarea${errors.description ? " input-error" : ""}`}
                     name="description"
                     value={form.description}
@@ -225,12 +228,13 @@ export default function BecomeSeller() {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">
+                    <label className="form-label" htmlFor="price">
                       Price (USD) <span className="required">*</span>
                     </label>
                     <div className="input-with-prefix">
                       <span className="input-prefix">$</span>
                       <input
+                        id="price"
                         className={`form-input${errors.price ? " input-error" : ""}`}
                         type="number"
                         name="price"
@@ -247,12 +251,13 @@ export default function BecomeSeller() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">
+                    <label className="form-label" htmlFor="deliveryTime">
                       Delivery Time <span className="required">*</span>
                     </label>
                     <div className="input-with-prefix">
                       <span className="input-prefix">📅</span>
                       <input
+                        id="deliveryTime"
                         className={`form-input${errors.deliveryTime ? " input-error" : ""}`}
                         type="number"
                         name="deliveryTime"

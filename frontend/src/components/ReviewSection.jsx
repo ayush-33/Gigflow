@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../api/api";
+import StarRating from "./StarRating";
 import "../styles/ReviewSection.css";
 
 function StarPicker({ rating, setRating }) {
@@ -70,8 +71,7 @@ function ReviewCard({ review }) {
           <span className="review-date">{date}</span>
         </div>
         <div className="review-stars">
-          {"★".repeat(review.rating)}
-          {"☆".repeat(5 - review.rating)}
+          <StarRating score={review.rating} />
         </div>
       </div>
       <p className="review-comment">{review.comment}</p>

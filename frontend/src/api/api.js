@@ -2,8 +2,10 @@ import axios from "axios";
 import { getAccessToken, setAccessToken, clearAccessToken } from "../utils/auth";
 import { connectSocket } from "../utils/socket";
 
+const BACKEND_URL = "http://localhost:5001";
+
 const api = axios.create({
-  baseURL: "http://localhost:5001/api",
+  baseURL: `${BACKEND_URL}/api`,
   withCredentials: true,
 });
 
@@ -63,7 +65,7 @@ api.interceptors.response.use(
 
     try {
       const { data } = await axios.post(
-        "http://localhost:5001/api/auth/refresh",
+        `${BACKEND_URL}/api/auth/refresh`,
         {},
         { withCredentials: true }
       );

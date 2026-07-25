@@ -1,0 +1,21 @@
+.star-rating-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    vertical-align: middle;
+}
+
+.star-rating-stars {
+    color: var(--accent, #f59e0b);
+    font-size: 14px;
+    letter-spacing: 1px;
+    line-height: 1;
+    display: inline-block;
+}
+
+.star-rating-count {
+    color: var(--text-muted, #9ca3af);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+}
