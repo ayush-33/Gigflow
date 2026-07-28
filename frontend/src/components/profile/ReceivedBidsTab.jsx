@@ -198,7 +198,12 @@ export default function ReceivedBidsTab({
                                 receiverName: bid.bidderId?.name,
                               }
                             })}>Message Freelancer</button>
-                            <span className="toolbar-label-status flex-grow-label">Awaiting response</span>
+                            <button
+                              className="toolbar-btn btn-secondary"
+                              disabled
+                            >
+                              Awaiting Response
+                            </button>
                           </div>
                         )}
                       </>

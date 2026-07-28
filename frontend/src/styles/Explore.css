@@ -78,10 +78,34 @@
 }
 
 /* ── Category chips ── */
+.category-chips-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+.category-chips-wrapper::before,
+.category-chips-wrapper::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 20px; /* matches the bottom padding of the chips row to align height */
+  width: 60px;
+  pointer-events: none;
+  z-index: 2;
+}
+.category-chips-wrapper::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--bg-sidebar) 0%, transparent 100%);
+}
+.category-chips-wrapper::after {
+  right: 0;
+  background: linear-gradient(-90deg, var(--bg-sidebar) 0%, transparent 100%);
+}
+
 .category-chips-row {
   display: flex; gap: 8px; overflow-x: auto;
   padding: 0 24px 20px;
-  max-width: 1300px; margin: 0 auto;
   scrollbar-width: none;
 }
 .category-chips-row::-webkit-scrollbar { display: none; }

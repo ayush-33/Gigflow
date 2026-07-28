@@ -365,24 +365,26 @@ useEffect(() => {
           </div>
         </div>
 
-        <div className="category-chips-row">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.value}
-              className={`chip${activeCategory === cat.value ? " active" : ""}`}
-              onClick={() => {
-                setActiveCategory(cat.value);
-                const params = new URLSearchParams();
-                if (liveQuery) params.set("q", liveQuery);
-                params.set("category", cat.value);
-                params.set("page", "1");
-                navigate(`/explore?${params.toString()}`);
-              }}
-            >
-              <span className="chip-icon">{cat.icon}</span>
-              {cat.label}
-            </button>
-          ))}
+        <div className="category-chips-wrapper">
+          <div className="category-chips-row">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.value}
+                className={`chip${activeCategory === cat.value ? " active" : ""}`}
+                onClick={() => {
+                  setActiveCategory(cat.value);
+                  const params = new URLSearchParams();
+                  if (liveQuery) params.set("q", liveQuery);
+                  params.set("category", cat.value);
+                  params.set("page", "1");
+                  navigate(`/explore?${params.toString()}`);
+                }}
+              >
+                <span className="chip-icon">{cat.icon}</span>
+                {cat.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

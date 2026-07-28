@@ -36,7 +36,7 @@ function RatingDistribution({ reviews }) {
     <div className="rating-distribution">
       {[5, 4, 3, 2, 1].map((star) => {
         const count = reviews.filter((r) => r.rating === star).length;
-        const pct   = Math.round((count / reviews.length) * 100);
+        const pct = Math.round((count / reviews.length) * 100);
         return (
           <div key={star} className="rating-bar-row">
             <span className="rating-bar-label">{star} ★</span>
@@ -56,23 +56,38 @@ function RatingDistribution({ reviews }) {
 
 function ReviewCard({ review }) {
   const initial = review.reviewerId?.name?.charAt(0)?.toUpperCase() || "?";
-  const date    = new Date(review.createdAt).toLocaleDateString("en-US", {
+  const date = new Date(review.createdAt).toLocaleDateString("en-US", {
     year: "numeric", month: "short", day: "numeric",
   });
 
   return (
     <div className="review-card">
       <div className="review-card-header">
-        <div className="reviewer-avatar">{initial}</div>
-        <div className="reviewer-info">
-          <span className="reviewer-name">
-            {review.reviewerId?.name || "Anonymous"}
-          </span>
-          <span className="review-date">{date}</span>
+
+        <div className="review-user">
+
+          <div className="reviewer-avatar">
+            {initial}
+          </div>
+
+          <div className="reviewer-info">
+
+            <span className="reviewer-name">
+              {review.reviewerId?.name || "Anonymous"}
+            </span>
+
+            <span className="review-date">
+              {date}
+            </span>
+
+          </div>
+
         </div>
+
         <div className="review-stars">
           <StarRating score={review.rating} />
         </div>
+
       </div>
       <p className="review-comment">{review.comment}</p>
     </div>
@@ -80,10 +95,10 @@ function ReviewCard({ review }) {
 }
 
 function ReviewForm({ gigId, isOwner, onSuccess }) {
-  const [rating,     setRating]     = useState(0);
-  const [comment,    setComment]    = useState("");
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [error,      setError]      = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -109,10 +124,23 @@ function ReviewForm({ gigId, isOwner, onSuccess }) {
 
   return (
     <form className="review-form" onSubmit={handleSubmit} noValidate>
-      <h3 className="review-form-title">Leave a Review</h3>
 
-      <StarPicker rating={rating} setRating={setRating} />
+      <div className="review-form-header">
 
+        <h3 className="review-form-title">
+          Leave a Review
+        </h3>
+
+        <p className="review-form-subtitle">
+          Share your experience after completing this project.
+        </p>
+
+      </div>
+
+      <StarPicker
+        rating={rating}
+        setRating={setRating}
+      />
       <div className="review-textarea-wrap">
         <textarea
           className="review-textarea"
@@ -150,10 +178,10 @@ function ReviewForm({ gigId, isOwner, onSuccess }) {
 }
 
 export default function ReviewSection({ gigId, isOwner, gigStatus, user }) {
-  const [reviews,      setReviews]      = useState([]);
-  const [canReview,    setCanReview]    = useState(false);
-  const [alreadyDone,  setAlreadyDone]  = useState(false);
-  const [submitted,    setSubmitted]    = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [canReview, setCanReview] = useState(false);
+  const [alreadyDone, setAlreadyDone] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [loadingReviews, setLoadingReviews] = useState(true);
 
   // Fetch reviews & check eligibility
@@ -199,19 +227,30 @@ export default function ReviewSection({ gigId, isOwner, gigStatus, user }) {
 
       {/* Header */}
       <div className="review-section-header">
-        <h2 className="review-section-title">
-          Reviews
-          {avgRating && (
-            <span className="review-avg-badge">
-              ★ {avgRating}
-              <span className="review-total-count">
-                ({reviews.length} review{reviews.length !== 1 ? "s" : ""})
-              </span>
-            </span>
-          )}
-        </h2>
-      </div>
 
+        <div className="review-header-left">
+
+          <h2 className="review-section-title">
+            Reviews
+          </h2>
+
+          {avgRating && (
+            <div className="review-rating-overview">
+
+              <span className="review-avg-badge">
+                ★ {avgRating}
+              </span>
+
+              <span className="review-total-count">
+                {reviews.length} Review{reviews.length !== 1 ? "s" : ""}
+              </span>
+
+            </div>
+          )}
+
+        </div>
+
+      </div>
       {/* Rating distribution */}
       {reviews.length > 0 && (
         <RatingDistribution reviews={reviews} />
