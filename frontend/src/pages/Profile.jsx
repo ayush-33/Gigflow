@@ -669,7 +669,9 @@ export default function Profile() {
                 } else if (item.key === "notifications") {
                   navigate("/notifications");
                 } else {
-                  setActiveTab(item.key);
+                  if (activeTab !== item.key) {
+                    setActiveTab(item.key);
+                  }
                 }
               }}
             >

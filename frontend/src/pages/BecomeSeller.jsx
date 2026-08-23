@@ -56,7 +56,31 @@ export default function BecomeSeller() {
   const [form, setForm] = useState({
     gigTitle: "", category: "", description: "",
     price: "", deliveryTime: "", image: null,
+    tags: []
   });
+  const [tagInput, setTagInput] = useState("");
+
+  const handleTagKeyDown = (e) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      const val = tagInput.trim().toLowerCase().replace(/[^a-zA-Z0-9-]/g, "");
+      if (!val) return;
+      if (form.tags.includes(val)) {
+        setTagInput("");
+        return;
+      }
+      if (form.tags.length >= 5) {
+        showToast("Maximum 5 tags allowed.", "error");
+        return;
+      }
+      setForm((p) => ({ ...p, tags: [...p.tags, val] }));
+      setTagInput("");
+    }
+  };
+
+  const removeTag = (tagToRemove) => {
+    setForm((p) => ({ ...p, tags: p.tags.filter((t) => t !== tagToRemove) }));
+  };
 
   const showToast = (message, type = "success") => {
     if (type === "success") {
@@ -96,6 +120,7 @@ export default function BecomeSeller() {
     fd.append("price",        form.price);
     fd.append("deliveryTime", form.deliveryTime);
     fd.append("image",        form.image);
+    fd.append("tags",         form.tags ? form.tags.join(",") : "");
 
     // ✅ NEW — using api.js
     await api.post("/gigs", fd, {
@@ -193,6 +218,30 @@ export default function BecomeSeller() {
                   {errors.category && (
                     <span className="form-error-msg">{errors.category}</span>
                   )}
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" htmlFor="tags-input">
+                    Tags / Skills <span className="form-hint">(Max 5, press Enter or comma to add)</span>
+                  </label>
+                  <div className="tags-input-container">
+                    <input
+                      id="tags-input"
+                      className="form-input"
+                      placeholder="e.g., logo, web-design, react"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={handleTagKeyDown}
+                    />
+                    <div className="tags-list" style={{ marginTop: '8px' }}>
+                      {form.tags && form.tags.map((tag) => (
+                        <span key={tag} className="tag-badge">
+                          #{tag}
+                          <button type="button" onClick={() => removeTag(tag)}>✕</button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 <button type="button" className="btn-primary" onClick={() => tryAdvance(1)}>

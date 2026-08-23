@@ -1,0 +1,61 @@
+.notfound-page {
+  min-height: calc(100vh - 120px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: var(--bg-base, #0f1117);
+}
+
+.notfound-card {
+  background: var(--bg-card, rgba(26, 29, 39, 0.65));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-lg, 16px);
+  padding: 48px;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(10px);
+  animation: fadeIn 0.45s ease-out;
+}
+
+.notfound-icon {
+  font-size: 64px;
+  margin-bottom: 24px;
+  animation: float 4s ease-in-out infinite;
+}
+
+.notfound-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-primary, #f1f5f9);
+  margin-bottom: 16px;
+}
+
+.notfound-text {
+  font-size: 15px;
+  color: var(--text-secondary, #94a3b8);
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge, EmptyState, BidComparisonView } from "./ProfileCommon";
 
@@ -34,6 +34,7 @@ export default function ReceivedBidsTab({
   handleApproveWork,
 }) {
   const navigate = useNavigate();
+  const [expandedBids, setExpandedBids] = useState(new Set());
 
   const filteredOffers = receivedBids.filter(bid => {
     if (offersFilter === "all") return true;
@@ -90,7 +91,7 @@ export default function ReceivedBidsTab({
           <EmptyState
             icon="📬"
             title="No offers yet"
-            sub="Once freelancers bid on your gigs, they will appear here. Share your gigs to get offers."
+            sub="Once clients bid on your gigs, they will appear here. Share your gigs to get offers."
             actionText="Post New Gig"
             onActionClick={() => navigate("/become-seller")}
           />
@@ -152,9 +153,26 @@ export default function ReceivedBidsTab({
 
                     <div className="bid-proposal-section">
                       <span className="bid-proposal-label">Proposal Details</span>
-                      <p className="card-description-clamp-3">
+                      <p className={expandedBids.has(bid._id) ? "" : "card-description-clamp-3"}>
                         {bid.message}
                       </p>
+                      {bid.message && bid.message.length > 150 && (
+                        <button
+                          type="button"
+                          className="expand-proposal-btn"
+                          onClick={() => {
+                            const newExpanded = new Set(expandedBids);
+                            if (newExpanded.has(bid._id)) {
+                              newExpanded.delete(bid._id);
+                            } else {
+                              newExpanded.add(bid._id);
+                            }
+                            setExpandedBids(newExpanded);
+                          }}
+                        >
+                          {expandedBids.has(bid._id) ? "Show Less" : "Read Full Proposal"}
+                        </button>
+                      )}
                     </div>
 
                     {bid.revisionNotes && (

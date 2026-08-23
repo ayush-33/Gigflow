@@ -303,7 +303,7 @@ const reviewCount = gig.reviewCount || 0;
                     })
                   }
                 >
-                  💳 Pay & Hire Now
+                  <span className="btn-icon">💳</span> Pay & Hire Now
                 </button>
               )}
 
@@ -343,14 +343,14 @@ const reviewCount = gig.reviewCount || 0;
                     }
                   })}
                 >
-                  💬 Message Client
+                  <span className="btn-icon">💬</span> Message Client
                 </button>
               )}
 
               {/* Freelancer workflow actions */}
               {user && !isOwner && bidStatus?.bidStatus && ["hired", "in_progress"].includes(bidStatus.bidStatus) && ["hired", "in_progress"].includes(gig.status) && (
                 <button className="btn-bid" style={{ background: "#10b981", borderColor: "#10b981", marginTop: "8px" }} onClick={() => handleLifecycleAction("submit-work")}>
-                  📤 Submit Work for Review
+                  <span className="btn-icon">📤</span> Submit Work for Review
                 </button>
               )}
               {user && !isOwner && bidStatus?.bidStatus === "submitted" && gig.status === "submitted" && (
@@ -372,10 +372,10 @@ const reviewCount = gig.reviewCount || 0;
                   </div>
                   <div style={{ display: "flex", gap: "8px" }}>
                     <button className="btn-bid" style={{ background: "#10b981", borderColor: "#10b981", flex: 1 }} onClick={() => handleLifecycleAction("approve-work")}>
-                      ✓ Approve
+                      <span className="btn-icon">✓</span> Approve
                     </button>
                     <button className="btn-delete" style={{ background: "#f59e0b", borderColor: "#d97706", color: "#fff", flex: 1 }} onClick={() => setShowRevisionModal(true)}>
-                      ↩ Revisions
+                      <span className="btn-icon">↩</span> Revisions
                     </button>
                   </div>
                 </div>
@@ -404,7 +404,7 @@ const reviewCount = gig.reviewCount || 0;
       }
     })}
   >
-    💬 Message Freelancer
+    <span className="btn-icon">💬</span> Message Freelancer
   </button>
 )}
 
@@ -419,10 +419,10 @@ const reviewCount = gig.reviewCount || 0;
               { user && isOwner && (
                 <div className="owner-actions-row">
                   <button className="btn-bid" onClick={() => navigate(`/edit-gig/${id}`)}>
-                    ✏️ Edit Gig
+                    <span className="btn-icon">✏️</span> Edit Gig
                   </button>
                   <button className="btn-delete" onClick={handleDelete}>
-                    🗑 Delete Gig
+                    <span className="btn-icon">🗑</span> Delete Gig
                   </button>
                 </div>
               )}

@@ -2231,6 +2231,13 @@ tbody tr:hover {
   align-items: stretch;
 }
 
+.my-gigs-grid .premium-dashboard-card {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+
 .premium-dashboard-card {
   display: flex;
   flex-direction: column;
@@ -3310,7 +3317,7 @@ tbody tr:hover {
   }
 
   .stats-subgrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr !important;
     padding: 16px;
   }
 
@@ -3582,6 +3589,7 @@ tbody tr:hover {
 
   .stats-grid {
     grid-template-columns: 1fr !important;
+    gap: 12px !important;
   }
 
   .my-gig-card-new {
@@ -3721,3 +3729,24 @@ tbody tr:hover {
 .btn-secondary:disabled {
   opacity: 1;
 }
+
+/* Clamping Expand/Collapse toggles */
+.expand-proposal-btn {
+  background: none !important;
+  border: none !important;
+  color: var(--brand, #3b82f6) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  padding: 4px 0 !important;
+  margin-top: 4px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  transition: color 0.2s !important;
+}
+
+.expand-proposal-btn:hover {
+  color: var(--brand-hover, #60a5fa) !important;
+  text-decoration: underline !important;
+}

@@ -28,13 +28,15 @@ const validateGig = ({ title, description, price, deliveryTime, category }) => {
 /* ---------- Create Gig ---------- */
 export const createGig = async (req, res) => {
   try {
-    const { title, category, description, price, deliveryTime } = req.body;
+    const { title, category, description, price, deliveryTime, tags } = req.body;
 
     const errors = validateGig({ title, category, description, price, deliveryTime });
     if (errors.length) return res.status(400).json({ message: errors[0], errors });
 
     // ✅ FIX: store ONLY the filename, not the full path
     const image = getFilename(req.file);
+
+    const parsedTags = typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : (Array.isArray(tags) ? tags : []);
 
     const gig = await Gig.create({
       title: title.trim(),
@@ -44,7 +46,8 @@ export const createGig = async (req, res) => {
       deliveryTime: Number(deliveryTime),
       image,
       ownerId: req.userId,
-      status: "open"
+      status: "open",
+      tags: parsedTags
     });
 
     res.status(201).json(gig);
@@ -58,7 +61,7 @@ export const getGigs = async (req, res) => {
   try {
     const search = req.query.search || "";
     // Include all active statuses so Explore shows hired/in_progress with status overlay
-    const query = { status: { $in: ["open", "assigned", "hired", "in_progress", "submitted"] } };
+    const query = { status: { $in: ["open", "assigned", "hired", "in_progress", "submitted", "completed"] } };
 
     if (search.trim()) {
       const keywords = search.trim().split(/\s+/).filter(Boolean);
@@ -156,9 +159,11 @@ export const updateGig = async (req, res) => {
     if (gig.ownerId.toString() !== req.userId)
       return res.status(403).json({ message: "Not authorized" });
 
-    const { title, category, description, price, deliveryTime } = req.body;
+    const { title, category, description, price, deliveryTime, tags } = req.body;
     const errors = validateGig({ title, category, description, price, deliveryTime });
     if (errors.length) return res.status(400).json({ message: errors[0], errors });
+
+    const parsedTags = typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : (Array.isArray(tags) ? tags : []);
 
     const updatedData = {
       title: title.trim(),
@@ -166,6 +171,7 @@ export const updateGig = async (req, res) => {
       description: description.trim(),
       price: Number(price),
       deliveryTime: Number(deliveryTime),
+      tags: parsedTags,
     };
 
     // ✅ FIX: store ONLY the filename
@@ -293,7 +299,7 @@ export const submitWork = async (req, res) => {
       receiverId: gig.ownerId,
       type: isRevision ? "REVISION_SUBMITTED" : "WORK_SUBMITTED",
       title: isRevision ? "Revision Submitted" : "Work Submitted for Review",
-      message: isRevision 
+      message: isRevision
         ? `Freelancer submitted revisions for "${gig.title}".`
         : `Freelancer submitted work for review on "${gig.title}".`,
       link: `/gig/${gig._id}`,

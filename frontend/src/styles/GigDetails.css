@@ -306,6 +306,7 @@
 .btn-bid, .btn-bid-submitted, .btn-delete, .btn-message {
   width: 100%;
   height: 48px;
+  padding: 12px 24px;
   border-radius: var(--radius-md);
   font-family: var(--font);
   font-size: 15px;
@@ -317,6 +318,16 @@
   cursor: pointer;
   letter-spacing: 0.02em;
   transition: all 0.22s var(--ease);
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .btn-bid {
@@ -428,6 +439,15 @@
   .gig-meta-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
   .gig-title-main { font-size: 20px; }
   .owner-actions-row { flex-direction: column; gap: 8px; }
+  
+  .btn-bid, .btn-bid-submitted, .btn-delete, .btn-message {
+    height: 48px !important;
+    padding: 12px 24px !important;
+    border-radius: var(--radius-md) !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.02em !important;
+  }
 }
 
 /* ── Badge & Workflow Status Styles ── */

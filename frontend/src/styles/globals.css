@@ -159,3 +159,10 @@ input, textarea, select {
     font-size: 14px;
   }
 }
+
+/* Accessibility Focus States */
+*:focus-visible {
+  outline: 2px solid var(--brand, #3b82f6);
+  outline-offset: 2px;
+}
+

@@ -36,6 +36,7 @@ import Notifications from "./pages/Notification";
 import Checkout from "./pages/Checkout";
 import Chat from "./pages/Chat";
 import toast from "react-hot-toast";
+import NotFound from "./pages/NotFound";
 
 
 function App() {
@@ -59,17 +60,17 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="App">
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg-base)' }}>
         <Toaster
-          position="bottom-right"
+          position="top-right"
           toastOptions={{
-            duration: 4000,
+            duration: 3500,
             style: {
-              background: '#1a1d27',
-              color: '#f1f5f9',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '12px',
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              background: 'var(--bg-card)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border)',
+              fontFamily: 'var(--font)',
+              fontSize: '14px',
             },
           }}
         />
@@ -148,6 +149,8 @@ function App() {
                 </ErrorBoundary>
               </PrivateRoute>
             } />
+
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </ErrorBoundary>
 

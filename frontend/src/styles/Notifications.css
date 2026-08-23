@@ -828,3 +828,17 @@
 .notif-footer:hover {
   background: rgba(59, 130, 246, 0.08);
 }
+
+/* Responsive adjustments for search wrapping on mobile */
+@media (max-width: 600px) {
+  .filter-sep {
+    display: none !important;
+  }
+  .search-wrap {
+    width: 100% !important;
+    margin-top: 8px !important;
+  }
+  .notif-search {
+    width: 100% !important;
+  }
+}
