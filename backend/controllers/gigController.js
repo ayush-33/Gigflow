@@ -14,14 +14,27 @@ const getFilename = (file) => {
 };
 
 /* ── Server-side validation ── */
-const validateGig = ({ title, description, price, deliveryTime, category }) => {
+const validateGig = ({ title, description, price, deliveryTime, category, tags }) => {
   const errors = [];
   if (!title || title.trim().length < 5) errors.push("Title must be at least 5 characters.");
   if (!description || description.trim().length < 20) errors.push("Description must be at least 20 characters.");
   if (!category) errors.push("Category is required.");
-  if (!price || isNaN(price) || Number(price) < 5) errors.push("Price must be at least $5.");
+  if (!price || isNaN(price) || Number(price) <= 0) errors.push("Price must be greater than  $0.");
   if (!deliveryTime || isNaN(deliveryTime) || Number(deliveryTime) < 1 || Number(deliveryTime) > 60)
     errors.push("Delivery time must be between 1 and 60 days.");
+
+  // Clean tags and validate
+  const cleanTags = typeof tags === 'string'
+    ? tags.split(',').map(t => t.trim()).filter(Boolean)
+    : (Array.isArray(tags)
+      ? tags.map(t => typeof t === 'string' ? t.trim() : '').filter(Boolean)
+      : []);
+  if (cleanTags.length === 0) {
+    errors.push("At least one skill is required.");
+  }
+  if (cleanTags.length > 5) {
+    errors.push("Maximum 5 skills allowed.");
+  }
   return errors;
 };
 
@@ -30,7 +43,7 @@ export const createGig = async (req, res) => {
   try {
     const { title, category, description, price, deliveryTime, tags } = req.body;
 
-    const errors = validateGig({ title, category, description, price, deliveryTime });
+    const errors = validateGig({ title, category, description, price, deliveryTime, tags });
     if (errors.length) return res.status(400).json({ message: errors[0], errors });
 
     // ✅ FIX: store ONLY the filename, not the full path
@@ -160,7 +173,7 @@ export const updateGig = async (req, res) => {
       return res.status(403).json({ message: "Not authorized" });
 
     const { title, category, description, price, deliveryTime, tags } = req.body;
-    const errors = validateGig({ title, category, description, price, deliveryTime });
+    const errors = validateGig({ title, category, description, price, deliveryTime, tags });
     if (errors.length) return res.status(400).json({ message: errors[0], errors });
 
     const parsedTags = typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : (Array.isArray(tags) ? tags : []);

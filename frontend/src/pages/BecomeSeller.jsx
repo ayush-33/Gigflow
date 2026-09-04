@@ -2,20 +2,21 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/api";
 import toast from "react-hot-toast";
+import ConfirmModal from "../components/ConfirmModal";
 import "../styles/GigForm.css";
 
 const CATEGORIES = [
-  { value: "logo-design",        label: "🎨 Logo Design"           },
-  { value: "web-development",    label: "💻 Web Development"        },
-  { value: "video-editing",      label: "🎬 Video Editing"          },
-  { value: "content-writing",    label: "✍️  Content Writing"        },
-  { value: "seo",                label: "🔍 SEO"                    },
-  { value: "graphic-design",     label: "🖌 Graphic Design"         },
-  { value: "music-production",   label: "🎵 Music Production"       },
-  { value: "social-media",       label: "📱 Social Media Marketing" },
+  { value: "logo-design", label: "🎨 Logo Design" },
+  { value: "web-development", label: "💻 Web Development" },
+  { value: "video-editing", label: "🎬 Video Editing" },
+  { value: "content-writing", label: "✍️  Content Writing" },
+  { value: "seo", label: "🔍 SEO" },
+  { value: "graphic-design", label: "🖌 Graphic Design" },
+  { value: "music-production", label: "🎵 Music Production" },
+  { value: "social-media", label: "📱 Social Media Marketing" },
   { value: "mobile-development", label: "📲 Mobile App Development" },
-  { value: "data-analysis",      label: "📊 Data Analysis"          },
-  { value: "ai-ml",              label: "🤖 AI & Machine Learning"  },
+  { value: "data-analysis", label: "📊 Data Analysis" },
+  { value: "ai-ml", label: "🤖 AI & Machine Learning" },
 ];
 
 const STEPS = ["Basics", "Details", "Media"];
@@ -30,12 +31,18 @@ const validate = (step, form) => {
       errors.gigTitle = "Title must be at least 5 characters.";
     if (!form.category)
       errors.category = "Please select a category.";
+
+    // Clean and validate tags/skills:
+    const cleanTags = form.tags ? form.tags.map(t => t.trim()).filter(Boolean) : [];
+    if (cleanTags.length === 0) {
+      errors.tags = "Please add at least one skill or technology.";
+    }
   }
   if (step === 1) {
     if (!form.description.trim() || form.description.trim().length < 20)
       errors.description = "Description must be at least 20 characters.";
-    if (!form.price || Number(form.price) < 5)
-      errors.price = "Price must be at least $5.";
+    if (!form.price || Number(form.price) < 0)
+      errors.price = "Price must be at least 0.";
     if (!form.deliveryTime || Number(form.deliveryTime) < 1 || Number(form.deliveryTime) > 60)
       errors.deliveryTime = "Delivery must be 1–60 days.";
   }
@@ -49,9 +56,9 @@ const validate = (step, form) => {
 export default function BecomeSeller() {
   const navigate = useNavigate();
 
-  const [step,    setStep]    = useState(0);
+  const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [errors,  setErrors]  = useState({});
+  const [errors, setErrors] = useState({});
 
   const [form, setForm] = useState({
     gigTitle: "", category: "", description: "",
@@ -59,27 +66,144 @@ export default function BecomeSeller() {
     tags: []
   });
   const [tagInput, setTagInput] = useState("");
+  const [modal, setModal] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSkills, setAiSkills] = useState([]);
+  const [aiSkillsLoading, setAiSkillsLoading] = useState(false);
+
+  const triggerAiRequest = async () => {
+    setAiLoading(true);
+    try {
+      const { data } = await api.post("/ai/generate-gig-description", {
+        title: form.gigTitle.trim(),
+        category: form.category,
+        tags: form.tags,
+        price: form.price ? Number(form.price) : "",
+        deliveryTime: form.deliveryTime ? Number(form.deliveryTime) : ""
+      });
+
+      if (data && data.description) {
+        setForm((p) => ({ ...p, description: data.description }));
+        setErrors((p) => ({ ...p, description: undefined }));
+        toast.success("✨ Description generated successfully!");
+      }
+    } catch (err) {
+      console.error("AI Generation failed:", err);
+      toast.error(err.response?.data?.message || "AI description generation failed. You can try again or write manually.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleGenerateDescription = () => {
+    if (!form.gigTitle.trim() || form.gigTitle.trim().length < 5) {
+      toast.error("Please enter a valid title (minimum 5 characters) in Step 1 to generate description.");
+      return;
+    }
+    if (!form.category) {
+      toast.error("Please select a category in Step 1 to generate description.");
+      return;
+    }
+
+    if (form.description.trim().length > 0) {
+      setModal({
+        type: "confirm",
+        title: "Generate a new AI description?",
+        body: "Your current description will be replaced.",
+        confirmLabel: "Generate",
+        onConfirm: () => triggerAiRequest(),
+      });
+    } else {
+      triggerAiRequest();
+    }
+  };
+
+  // Clear AI suggestions if title or category changes
+  useEffect(() => {
+    setAiSkills([]);
+  }, [form.gigTitle, form.category]);
 
   const handleTagKeyDown = (e) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
-      const val = tagInput.trim().toLowerCase().replace(/[^a-zA-Z0-9-]/g, "");
+      const rawVal = tagInput.trim();
+      const val = rawVal.replace(/[^a-zA-Z0-9\s.\-#+/_]/g, "");
       if (!val) return;
-      if (form.tags.includes(val)) {
+
+      const isDuplicate = form.tags.some(
+        (t) => t.toLowerCase() === val.toLowerCase()
+      );
+      if (isDuplicate) {
         setTagInput("");
         return;
       }
       if (form.tags.length >= 5) {
-        showToast("Maximum 5 tags allowed.", "error");
+        setErrors((p) => ({ ...p, tags: "Maximum 5 skills allowed." }));
         return;
       }
       setForm((p) => ({ ...p, tags: [...p.tags, val] }));
+      setErrors((p) => ({ ...p, tags: undefined }));
       setTagInput("");
     }
   };
 
   const removeTag = (tagToRemove) => {
     setForm((p) => ({ ...p, tags: p.tags.filter((t) => t !== tagToRemove) }));
+  };
+
+  const handleSuggestSkills = async () => {
+    if (!form.gigTitle.trim() || form.gigTitle.trim().length < 5) {
+      toast.error("Please enter a valid title (minimum 5 characters) to suggest skills.");
+      return;
+    }
+    if (!form.category) {
+      toast.error("Please select a category to suggest skills.");
+      return;
+    }
+
+    setAiSkillsLoading(true);
+    try {
+      const { data } = await api.post("/ai/suggest-skills", {
+        title: form.gigTitle.trim(),
+        category: form.category,
+        existingSkills: form.tags
+      });
+
+      if (data && Array.isArray(data.skills)) {
+        if (data.skills.length === 0) {
+          toast.error("No new skills recommended. You can add skills manually.");
+          setAiSkills([]);
+        } else {
+          setAiSkills(data.skills);
+          toast.success("✨ Found skill recommendations!");
+        }
+      }
+    } catch (err) {
+      console.error("AI Skill suggestion failed:", err);
+      toast.error(
+        err.response?.data?.message ||
+        "AI skill suggestions are temporarily unavailable. You can add skills manually."
+      );
+    } finally {
+      setAiSkillsLoading(false);
+    }
+  };
+
+  const addAiSkill = (skill) => {
+    if (form.tags.length >= 5) {
+      setErrors((p) => ({ ...p, tags: "Maximum 5 skills allowed." }));
+      return;
+    }
+    const isDuplicate = form.tags.some(
+      (t) => t.toLowerCase() === skill.toLowerCase()
+    );
+    if (isDuplicate) {
+      setAiSkills((p) => p.filter((s) => s !== skill));
+      return;
+    }
+    setForm((p) => ({ ...p, tags: [...p.tags, skill] }));
+    setErrors((p) => ({ ...p, tags: undefined }));
+    setAiSkills((p) => p.filter((s) => s !== skill));
   };
 
   const showToast = (message, type = "success") => {
@@ -107,39 +231,39 @@ export default function BecomeSeller() {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  const errs = validate(2, form);
-  if (Object.keys(errs).length) { setErrors(errs); return; }
+    e.preventDefault();
+    const errs = validate(2, form);
+    if (Object.keys(errs).length) { setErrors(errs); return; }
 
-  setLoading(true);
-  try {
-    const fd = new FormData();
-    fd.append("title",        form.gigTitle.trim());
-    fd.append("category",     form.category);
-    fd.append("description",  form.description.trim());
-    fd.append("price",        form.price);
-    fd.append("deliveryTime", form.deliveryTime);
-    fd.append("image",        form.image);
-    fd.append("tags",         form.tags ? form.tags.join(",") : "");
+    setLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append("title", form.gigTitle.trim());
+      fd.append("category", form.category);
+      fd.append("description", form.description.trim());
+      fd.append("price", form.price);
+      fd.append("deliveryTime", form.deliveryTime);
+      fd.append("image", form.image);
+      fd.append("tags", form.tags ? form.tags.join(",") : "");
 
-    // ✅ NEW — using api.js
-    await api.post("/gigs", fd, {
-      headers: { "Content-Type": "multipart/form-data" }
-    });
+      // ✅ NEW — using api.js
+      await api.post("/gigs", fd, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
 
-    showToast("Gig published successfully! 🎉");
+      showToast("Gig published successfully! 🎉");
 
-    setTimeout(
-      () => navigate("/profile", { state: { refresh: Date.now() } }),
-      1500
-    );
+      setTimeout(
+        () => navigate("/profile", { state: { refresh: Date.now() } }),
+        1500
+      );
 
-  } catch (err) {
-    showToast(err.response?.data?.message || "Failed to publish gig.", "error");
-  } finally {
-    setLoading(false);
-  }
-};
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to publish gig.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const stepState = (i) => (i < step ? "done" : i === step ? "active" : "");
 
@@ -222,26 +346,65 @@ export default function BecomeSeller() {
 
                 <div className="form-group">
                   <label className="form-label" htmlFor="tags-input">
-                    Tags / Skills <span className="form-hint">(Max 5, press Enter or comma to add)</span>
+                    Skills / Technologies <span className="required">*</span> <span className="form-hint">(Max 5, press Enter or comma to add)</span>
                   </label>
                   <div className="tags-input-container">
                     <input
                       id="tags-input"
-                      className="form-input"
+                      className={`form-input${errors.tags ? " input-error" : ""}`}
                       placeholder="e.g., logo, web-design, react"
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
                       onKeyDown={handleTagKeyDown}
                     />
-                    <div className="tags-list" style={{ marginTop: '8px' }}>
-                      {form.tags && form.tags.map((tag) => (
-                        <span key={tag} className="tag-badge">
-                          #{tag}
-                          <button type="button" onClick={() => removeTag(tag)}>✕</button>
-                        </span>
-                      ))}
-                    </div>
+                    {errors.tags && (
+                      <span className="form-error-msg">{errors.tags}</span>
+                    )}
+                    {form.tags && form.tags.length > 0 && (
+                      <div className="tags-list" style={{ marginTop: '8px' }}>
+                        {form.tags.map((tag) => (
+                          <span key={tag} className="tag-badge">
+                            #{tag}
+                            <button type="button" onClick={() => removeTag(tag)}>✕</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
+
+                  <button
+                    type="button"
+                    className="btn-ai"
+                    disabled={aiSkillsLoading}
+                    onClick={handleSuggestSkills}
+                    style={{ marginTop: "4px" }}
+                  >
+                    {aiSkillsLoading ? (
+                      <>
+                        <div className="btn-ai-spinner" /> Suggesting skills...
+                      </>
+                    ) : (
+                      "✨ Suggest Skills with AI"
+                    )}
+                  </button>
+
+                  {aiSkills && aiSkills.length > 0 && (
+                    <div className="ai-suggestions-container" style={{ marginTop: "4px" }}>
+                      <div className="ai-suggestions-title">AI Suggestions</div>
+                      <div className="ai-suggestions-list">
+                        {aiSkills.map((skill) => (
+                          <button
+                            key={skill}
+                            type="button"
+                            className="ai-suggestion-badge"
+                            onClick={() => addAiSkill(skill)}
+                          >
+                            + {skill}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <button type="button" className="btn-primary" onClick={() => tryAdvance(1)}>
@@ -254,26 +417,6 @@ export default function BecomeSeller() {
             {step === 1 && (
               <>
                 <div className="form-section-label">Gig Details</div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="description">
-                    Description <span className="required">*</span>
-                  </label>
-                  <textarea
-                    id="description"
-                    className={`form-textarea${errors.description ? " input-error" : ""}`}
-                    name="description"
-                    value={form.description}
-                    onChange={handleChange}
-                    placeholder="Describe what you'll deliver, your process, and what makes you stand out…"
-                    rows={6}
-                  />
-                  {errors.description ? (
-                    <span className="form-error-msg">{errors.description}</span>
-                  ) : (
-                    <span className="form-hint">Minimum 80 characters recommended</span>
-                  )}
-                </div>
 
                 <div className="form-row">
                   <div className="form-group">
@@ -326,6 +469,41 @@ export default function BecomeSeller() {
                   </div>
                 </div>
 
+                <div className="form-group">
+                  <label className="form-label" htmlFor="description">
+                    Description <span className="required">*</span>
+                  </label>
+                  <textarea
+                    id="description"
+                    className={`form-textarea${errors.description ? " input-error" : ""}`}
+                    name="description"
+                    value={form.description}
+                    onChange={handleChange}
+                    placeholder="Describe what you'll deliver, your process, and what makes you stand out…"
+                    rows={6}
+                  />
+                  {errors.description ? (
+                    <span className="form-error-msg">{errors.description}</span>
+                  ) : (
+                    <span className="form-hint">Minimum 80 characters recommended</span>
+                  )}
+
+                  <button
+                    type="button"
+                    className="btn-ai"
+                    disabled={aiLoading}
+                    onClick={handleGenerateDescription}
+                  >
+                    {aiLoading ? (
+                      <>
+                        <div className="btn-ai-spinner" /> Generating description...
+                      </>
+                    ) : (
+                      "✨ Generate with AI"
+                    )}
+                  </button>
+                </div>
+
                 <div className="btn-row">
                   <button type="button" className="btn-secondary" onClick={() => setStep(0)}>
                     ← Back
@@ -347,9 +525,8 @@ export default function BecomeSeller() {
                     Cover Image <span className="required">*</span>
                   </label>
                   <div
-                    className={`upload-zone ${form.image ? "has-file" : ""}${
-                      errors.image ? " upload-error" : ""
-                    }`}
+                    className={`upload-zone ${form.image ? "has-file" : ""}${errors.image ? " upload-error" : ""
+                      }`}
                   >
                     <input
                       type="file"
@@ -407,7 +584,7 @@ export default function BecomeSeller() {
         </div>
       </div>
 
-
+      <ConfirmModal modal={modal} onClose={() => setModal(null)} />
     </div>
   );
 }

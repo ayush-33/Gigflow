@@ -31,6 +31,7 @@ import Message from "./models/message.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import conversationRoutes from "./routes/conversationRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -380,6 +381,7 @@ app.use("/api/saved-gigs", savedGigRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.get("/", (req, res) => res.send("GigFlow Backend Running"));
 
