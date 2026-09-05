@@ -7,13 +7,18 @@ import { syncBidToConversation, getUnreadCountForUser } from "../utils/conversat
 /* ── Validation ── */
 const validateBid = ({ price, message }) => {
   const errors = [];
+
   if (!price || isNaN(price) || Number(price) < 1)
     errors.push("Bid price must be at least $1.");
+
   if (!message || message.trim().length < 10)
     errors.push("Proposal message must be at least 10 characters.");
+
+  if (message && message.trim().length > 1500)
+    errors.push("Proposal message cannot exceed 1500 characters.");
+
   return errors;
 };
-
 /* ---------- Create Bid ---------- */
 export const createBid = async (req, res) => {
   try {
@@ -255,19 +260,19 @@ export const acceptBid = async (req, res) => {
     }
 
     // Guard against race condition: check if any other bid is already hired
-    const conflictingBid = await Bid.findOne({ 
-      gigId: gig._id, 
-      status: 'hired' 
+    const conflictingBid = await Bid.findOne({
+      gigId: gig._id,
+      status: 'hired'
     });
-    
+
     if (conflictingBid) {
       return res.status(409).json({ message: "Another freelancer has already been hired for this gig." });
     }
 
     bid.status = "payment_pending";
     await bid.save();
-    const systemMsgText = isOwner 
-      ? "Bid accepted — proceeding to payment" 
+    const systemMsgText = isOwner
+      ? "Bid accepted — proceeding to payment"
       : "Counter offer accepted — proceeding to payment";
     await syncBidToConversation(bid, req.userId, { systemMessageText: systemMsgText });
 
@@ -276,8 +281,8 @@ export const acceptBid = async (req, res) => {
       receiverId: isOwner ? bid.bidderId._id : gig.ownerId,
       type: "BID_ACCEPTED",
       title: "Bid Accepted",
-      message: isOwner 
-        ? `Your bid on "${gig.title}" has been accepted.` 
+      message: isOwner
+        ? `Your bid on "${gig.title}" has been accepted.`
         : `${bid.bidderId.name} accepted your counter offer on "${gig.title}". Complete payment to start the project.`,
       link: "/profile",
       meta: { role: isOwner ? "freelancer" : "client", bidId: bid._id, gigId: gig._id }
@@ -286,14 +291,14 @@ export const acceptBid = async (req, res) => {
     res.json({
       success: true,
       checkoutData: {
-        bidId:           bid._id,
-        gigId:           gig._id,
-        gigTitle:        gig.title,
-        gigImage:        gig.image,
-        gigPrice:        bid.price,
-        deliveryTime:    gig.deliveryTime,
-        freelancerName:  bid.bidderId?.name || 'Freelancer',
-        freelancerId:    bid.bidderId?._id,
+        bidId: bid._id,
+        gigId: gig._id,
+        gigTitle: gig.title,
+        gigImage: gig.image,
+        gigPrice: bid.price,
+        deliveryTime: gig.deliveryTime,
+        freelancerName: bid.bidderId?.name || 'Freelancer',
+        freelancerId: bid.bidderId?._id,
       }
     });
   } catch (error) {

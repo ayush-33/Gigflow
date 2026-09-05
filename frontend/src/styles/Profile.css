@@ -3600,6 +3600,11 @@ tbody tr:hover {
     padding: 16px !important;
   }
 
+  /* Prevent one expanded proposal from stretching neighboring cards */
+  .my-gigs-grid .bid-card-new {
+    align-self: start;
+  }
+
   .toolbar-btn {
     min-height: 44px;
     width: 100%;
@@ -3749,4 +3754,4 @@ tbody tr:hover {
 .expand-proposal-btn:hover {
   color: var(--brand-hover, #60a5fa) !important;
   text-decoration: underline !important;
-}
+}

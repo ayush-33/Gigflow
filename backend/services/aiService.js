@@ -531,3 +531,377 @@ Example:
     skills: finalSkills.slice(0, 8)
   };
 };
+
+/**
+ * Conservatively sanitizes model output for proposals.
+ * Removes outer markdown fences and common conversational prefixes.
+ */
+export const sanitizeProposalText = (text) => {
+  if (!text || typeof text !== "string") {
+    return "";
+  }
+
+  let clean = text.trim();
+
+  // Remove outer Markdown code fences
+  clean = clean.replace(/^```(?:markdown|text)?\s*/i, "");
+  clean = clean.replace(/\s*```$/i, "");
+  clean = clean.trim();
+
+  // Remove common conversational and labeling prefixes
+  const prefixes = [
+    /^sure[!,\.]?\s*(here's|here\s+is)\s*(your|the|a|a\s+custom|a\s+tailored)?\s*proposal:?\s*/i,
+    /^here\s*is\s*(your|the|a|a\s+custom|a\s+tailored)?\s*proposal:?\s*/i,
+    /^here\s*is\s*(your|the)\s*generated\s*proposal:?\s*/i,
+    /^proposal:\s*/i,
+    /^subject:\s*proposal\s*for\s*.*?\n+/i
+  ];
+
+  for (const prefix of prefixes) {
+    if (prefix.test(clean)) {
+      clean = clean.replace(prefix, "");
+      break;
+    }
+  }
+
+  return clean.trim();
+};
+
+/**
+ * Generates an AI-tailored proposal for a freelancer placing a bid on a gig.
+ * Uses GEMINI_PROPOSAL_API_KEY completely separately from GEMINI_API_KEY.
+ *
+ * Experience rule:
+ * - If the backend provides relevant completed projects, the proposal MUST
+ *   mention at least one of them.
+ * - Relevance is based on matching skills/tags or category.
+ * - If no relevant completed projects exist, no previous experience is claimed.
+ *
+ * @param {Object} params
+ * @param {Object} params.gig - Current gig details
+ * @param {Array<Object>} params.completedProjects - Relevant completed projects
+ * @param {string} [params.bio] - Freelancer bio
+ * @param {string} [params.freelancerName] - Freelancer name
+ * @returns {Promise<{ proposal: string }>}
+ */
+/**
+ * Generates an AI-tailored proposal for a freelancer placing a bid on a gig.
+ *
+ * Experience rules:
+ * - Relevant completed projects are supplied by the controller.
+ * - If relevant projects exist, AI MUST mention at least one.
+ * - Relevance can be based on matching skills/tags OR category.
+ * - If no relevant projects exist, AI MUST NOT mention previous experience.
+ *
+ * AI proposal limit:
+ * - Target: 1000–1150 characters
+ * - Hard limit: 1200 characters
+ * - Frontend can still allow up to 1500 characters.
+ *
+ * Uses GEMINI_PROPOSAL_API_KEY separately from GEMINI_API_KEY.
+ */
+export const generateProposal = async ({
+  gig,
+  completedProjects = [],
+  freelancerName = ""
+}) => {
+  // Proposal AI uses ONLY the proposal-specific API key.
+  const apiKey = process.env.GEMINI_PROPOSAL_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "GEMINI_PROPOSAL_API_KEY is not defined in the backend environment"
+    );
+  }
+
+  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+
+  const hasRelevantExperience =
+    Array.isArray(completedProjects) &&
+    completedProjects.length > 0;
+
+  // Normalize values only for displaying the matching evidence
+  // to Gemini. The controller is responsible for selecting
+  // relevant completed projects.
+  const normalize = (value) =>
+    String(value || "")
+      .toLowerCase()
+      .replace(/[^\w\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const currentTags = new Set(
+    (Array.isArray(gig?.tags) ? gig.tags : [])
+      .map(normalize)
+      .filter(Boolean)
+  );
+
+  const currentCategory = normalize(gig?.category);
+
+  const completedProjectsText = hasRelevantExperience
+    ? completedProjects
+      .slice(0, 2)
+      .map((project, index) => {
+        const projectTags = Array.isArray(project?.tags)
+          ? project.tags.map(normalize).filter(Boolean)
+          : [];
+
+        const sharedSkills = projectTags.filter((tag) =>
+          currentTags.has(tag)
+        );
+
+        const categoryMatches =
+          currentCategory &&
+          normalize(project?.category) === currentCategory;
+
+        return `PROJECT ${index + 1}
+Title: ${project?.title || "Not provided"}
+Category: ${project?.category || "Not provided"}
+Description: ${project?.description || "Not provided"}
+Skills/Tags: ${Array.isArray(project?.tags) && project.tags.length
+            ? project.tags.join(", ")
+            : "None"
+          }
+MATCHED SKILLS/TAGS: ${sharedSkills.length ? sharedSkills.join(", ") : "None"
+          }
+MATCHED CATEGORY: ${categoryMatches ? "Yes" : "No"}`;
+      })
+      .join("\n\n")
+    : "NONE";
+
+  const systemInstruction = `
+You are an expert freelance proposal writer for the GigFlow marketplace.
+
+Write ONE professional, natural and personalized proposal for a
+freelancer applying to the CURRENT GIG.
+
+The CURRENT GIG is always the primary focus.
+
+EXPERIENCE RULE — CRITICAL:
+
+If RELEVANT COMPLETED PROJECTS are provided:
+
+- You MUST mention at least ONE relevant completed project.
+- Prefer the strongest relevant project.
+- Mention its actual project title or accurately describe its actual type.
+- Explain briefly why that project is relevant to the CURRENT GIG.
+- Use the matched skills/tags or category when useful.
+- The previous project must remain factually accurate.
+- NEVER change the previous project's actual type.
+- NEVER claim the freelancer completed the current gig previously unless
+  the provided project actually was that type.
+- Do not simply list the project. Connect the experience to the current gig.
+
+Example:
+
+Previous project:
+Weather Website
+Skills: React, Node.js, Responsive Design
+Category: Web Development
+
+Current gig:
+Portfolio Website
+Skills: React, Node.js, Responsive Design
+Category: Web Development
+
+Good:
+"I recently built a weather website using React, Node.js and responsive
+design, giving me relevant experience for your portfolio project."
+
+Bad:
+"I have previously built portfolio websites."
+
+If NO RELEVANT COMPLETED PROJECTS are provided:
+
+- Do NOT mention previous projects.
+- Do NOT claim previous experience.
+- Do NOT say the freelancer has completed similar work.
+- Do NOT imply experience that was not provided.
+- Focus only on the CURRENT GIG, its requirements and the approach.
+
+ANTI-HALLUCINATION:
+
+Never invent:
+- previous projects
+- clients
+- years of experience
+- certifications
+- degrees
+- awards
+- achievements
+- technologies
+- skills
+- tools
+- deliverables
+- results
+- guarantees
+
+Only mention previous experience using information explicitly provided
+in RELEVANT COMPLETED PROJECTS.
+
+WRITING STYLE:
+
+- First person.
+- Professional and confident.
+- Natural and client-focused.
+- Show clear understanding of the CURRENT GIG.
+- Avoid generic filler.
+- Avoid keyword stuffing.
+- Do not copy the gig description word-for-word.
+- Do not overuse "I will".
+- Use 2–3 short paragraphs.
+- End with a natural call to action.
+
+LENGTH RULE — CRITICAL:
+
+- Maximum 1200 characters INCLUDING spaces and punctuation.
+- Aim for approximately 1000–1150 characters.
+- Do not try to fill the full 1500-character frontend limit.
+- Always finish complete sentences.
+- Never intentionally exceed 1200 characters.
+
+OUTPUT:
+
+Return ONLY the final proposal text.
+
+Do NOT include:
+- "Sure! Here is your proposal"
+- "Here is your proposal"
+- "Proposal:"
+- Markdown code fences
+- Explanations
+- Notes
+- Analysis
+`;
+
+  const promptText = `
+Create the final proposal now.
+
+CURRENT GIG:
+Title: "${gig?.title || ""}"
+Category: "${gig?.category || ""}"
+Description: "${gig?.description || ""}"
+Skills/Tags: ${Array.isArray(gig?.tags) && gig.tags.length
+      ? gig.tags.join(", ")
+      : "None"
+    }
+
+FREELANCER:
+Name: "${freelancerName || "Freelancer"}"
+
+RELEVANT COMPLETED PROJECTS:
+${completedProjectsText}
+
+GENERATION RULE:
+
+${hasRelevantExperience
+      ? `Relevant previous work IS available.
+
+You MUST mention at least ONE of the provided projects.
+Choose the strongest match and naturally explain how its actual
+skills, technologies, category, or transferable experience applies
+to the CURRENT GIG.
+
+Do not invent anything about the previous project.`
+      : `NO relevant previous work is available.
+
+Do NOT mention previous projects or previous experience.
+Focus entirely on the CURRENT GIG and explain how the freelancer
+would approach the requested work.`
+    }
+
+The proposal should be approximately 1000–1150 characters and MUST
+NEVER exceed 1200 characters.
+
+Return ONLY the proposal text.
+`;
+
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/` +
+    `${model}:generateContent?key=${apiKey}`;
+
+  const payload = {
+    contents: [
+      {
+        parts: [
+          {
+            text: promptText
+          }
+        ]
+      }
+    ],
+
+    systemInstruction: {
+      parts: [
+        {
+          text: systemInstruction
+        }
+      ]
+    },
+
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 1500,
+      thinkingConfig: {
+        thinkingLevel: "minimal"
+      }
+    }
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+  console.log("Gemini status:", response.status);
+
+  const responseBody = await response.text();
+
+  console.log("Gemini response:", responseBody);
+  if (!response.ok) {
+    throw new Error(
+      `Gemini API error: ${response.status} - ${responseBody}`
+    );
+  }
+
+  const data = JSON.parse(responseBody);
+
+  const finishReason = data.candidates?.[0]?.finishReason;
+
+  if (finishReason === "MAX_TOKENS") {
+    throw new Error(
+      "Gemini proposal generation was truncated. Please try again."
+    );
+  }
+
+  const generatedText =
+    data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+  if (!generatedText) {
+    throw new Error(
+      "Gemini API response did not contain generated proposal text"
+    );
+  }
+
+  const sanitized = sanitizeProposalText(generatedText);
+
+  if (!sanitized) {
+    throw new Error(
+      "Gemini API response did not contain valid proposal text after sanitization"
+    );
+  }
+
+  // AI-specific hard limit.
+  // Frontend may still allow 1500 characters.
+  if (sanitized.length > 1200) {
+    throw new Error(
+      "Generated proposal exceeds the 1200-character AI limit."
+    );
+  }
+
+  return {
+    proposal: sanitized
+  };
+};

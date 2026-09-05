@@ -5,18 +5,42 @@ import toast from "react-hot-toast";
 import "../styles/PlaceBid.css";
 
 export default function PlaceBid() {
-  const { id }   = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
 
-  const [gig,     setGig]     = useState(null);
-  const [price,   setPrice]   = useState("");
+  const [gig, setGig] = useState(null);
+  const [price, setPrice] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [errors,  setErrors]  = useState({});
+  const [errors, setErrors] = useState({});
   const [focused, setFocused] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [proposalLoading, setProposalLoading] = useState(false);
 
-  
+  const handleGenerateProposal = async () => {
+    if (proposalLoading) return;
+
+    setProposalLoading(true);
+    try {
+      const { data } = await api.post("/ai/generate-proposal", {
+        gigId: id
+      });
+
+      if (data && data.proposal) {
+        setMessage(data.proposal);
+        setErrors((prev) => ({ ...prev, message: undefined }));
+        toast.success("✨ Proposal generated successfully!");
+      }
+    } catch (err) {
+      console.error("AI proposal generation error:", err);
+      toast.error(
+        err.response?.data?.message ||
+        "Failed to generate proposal. You can write your proposal manually."
+      );
+    } finally {
+      setProposalLoading(false);
+    }
+  };
 
   // Gig fetch
   useEffect(() => {
@@ -37,33 +61,33 @@ export default function PlaceBid() {
       errs.price = "Please enter a valid bid amount (minimum $1).";
     if (!message.trim() || message.trim().length < 10)
       errs.message = "Your proposal must be at least 10 characters.";
-    if (message.trim().length > 1000)
-      errs.message = "Proposal must be under 1000 characters.";
+    if (message.trim().length > 1500)
+      errs.message = "Proposal must be under 1500 characters.";
     return errs;
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  const errs = validate();
-  if (Object.keys(errs).length) { setErrors(errs); return; }
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length) { setErrors(errs); return; }
 
-  setLoading(true);
-  try {
-    await api.post("/bids", {
-      gigId: id,
-      price: Number(price),
-      message: message.trim(),
-    });
+    setLoading(true);
+    try {
+      await api.post("/bids", {
+        gigId: id,
+        price: Number(price),
+        message: message.trim(),
+      });
 
-    toast.success("Bid placed successfully!");
-    setShowSuccessModal(true);
+      toast.success("Bid placed successfully!");
+      setShowSuccessModal(true);
 
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Failed to submit bid.");
-  } finally {
-    setLoading(false);
-  }
-};
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to submit bid.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   /* Budget hint logic */
   const getBudgetHint = () => {
@@ -77,9 +101,9 @@ export default function PlaceBid() {
     return { type: "warn", text: `$${n - gig.price} above client's budget` };
   };
 
-  const budgetHint   = getBudgetHint();
-  const charPct      = Math.min((message.length / 1000) * 100, 100);
-  const charOverflow = message.length > 900;
+  const budgetHint = getBudgetHint();
+  const charPct = Math.min((message.length / 1500) * 100, 100);
+  const charOverflow = message.length > 1350;
 
   return (
     <div className="place-bid-page">
@@ -150,16 +174,33 @@ export default function PlaceBid() {
 
             {/* Message field */}
             <div className={`bid-field${focused === "message" ? " bid-field--focused" : ""}`}>
-              <label className="bid-label" htmlFor="message">
-                Proposal message <span className="bid-required">*</span>
-              </label>
+              <div className="bid-label-row">
+                <label className="bid-label" htmlFor="message">
+                  Proposal message <span className="bid-required">*</span>
+                </label>
+                <button
+                  type="button"
+                  className="btn-ai-proposal"
+                  disabled={proposalLoading}
+                  onClick={handleGenerateProposal}
+                  title="Generate a tailored proposal with AI"
+                >
+                  {proposalLoading ? (
+                    <>
+                      <span className="btn-ai-spinner" /> Generating...
+                    </>
+                  ) : (
+                    "✨ Generate Proposal with AI"
+                  )}
+                </button>
+              </div>
               <textarea
                 id="message"
                 className={`bid-textarea${errors.message ? " bid-input--error" : ""}`}
                 placeholder="Explain your approach, timeline, relevant experience, and why you're the right fit…"
                 value={message}
                 rows={7}
-                maxLength={1000}
+                maxLength={1500}
                 onFocus={() => setFocused("message")}
                 onBlur={() => setFocused(null)}
                 onChange={(e) => {
@@ -174,7 +215,7 @@ export default function PlaceBid() {
                   <span className="bid-hint-text">Min 10 characters. Be specific — it wins bids.</span>
                 )}
                 <span className={`bid-char-count${charOverflow ? " bid-char-count--warn" : ""}`}>
-                  {message.length} / 1000
+                  {message.length} / 1500
                 </span>
               </div>
               {/* Progress bar */}
