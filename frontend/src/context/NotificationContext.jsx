@@ -1,8 +1,7 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import api from "../api/api";
 import { useAuth } from "./AuthContext";
 import { getAccessToken } from "../utils/auth";
-import { getSocket } from "../utils/socket";
 import toast from "react-hot-toast";
 
 const NotificationContext = createContext();
@@ -43,6 +42,8 @@ export function NotificationProvider({ children }) {
     }
   }, [user]);
 
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
   // Connect socket when user logs in, disconnect on logout
   useEffect(() => {
     if (!user || !getAccessToken()) {
@@ -55,6 +56,10 @@ export function NotificationProvider({ children }) {
 
     if (!socket) return;
 
+    const triggerDashboardRefresh = () => {
+      setRefreshTrigger((prev) => prev + 1);
+    };
+
     const handleNotification = (newNotif) => {
       // Guard: do not show toast or append to notification array if current user is the sender (actor)
       const senderIdStr = newNotif.senderId?._id?.toString() || newNotif.senderId?.toString();
@@ -63,8 +68,15 @@ export function NotificationProvider({ children }) {
         console.log("[NotificationContext] Bypassing self-notification from socket");
         return;
       }
+
+      // Guard: skip showing notification toasts if the user is already on the relevant chat screen
+      if (newNotif.meta?.roomId && window.location.pathname === `/chat/${newNotif.meta.roomId}`) {
+        return;
+      }
+
       setNotifications((prev) => [newNotif, ...prev]);
       showToast(newNotif.message || newNotif.body || "New notification!", "notification");
+      triggerDashboardRefresh();
     };
 
     const handleNewMessage = (msg) => {
@@ -83,6 +95,12 @@ export function NotificationProvider({ children }) {
         return;
       }
 
+      // Suppress duplicate chat toast for counter-offer system messages
+      // since notifyUser will emit a formal COUNTER_OFFER_RECEIVED notification
+      if (msg.type === "offer" || msg.type === "system") {
+        return;
+      }
+
       showToast(`${msg.senderId?.name || "Someone"} sent you a message: "${msg.message.slice(0, 40)}${msg.message.length > 40 ? '...' : ''}"`, "message");
     };
 
@@ -95,16 +113,29 @@ export function NotificationProvider({ children }) {
       setUnreadMessages(totalUnread);
     };
 
+    const handleGenericUpdate = () => {
+      fetchNotifications();
+      triggerDashboardRefresh();
+    };
+
     socket.on("notification", handleNotification);
     socket.on("newMessage", handleNewMessage);
     socket.on("messagesSeen", handleMessagesSeen);
     socket.on("navbarUnreadUpdate", handleNavbarUnreadUpdate);
+    socket.on("bidHired", handleGenericUpdate);
+    socket.on("bidPlaced", handleGenericUpdate);
+    socket.on("bidResubmitted", handleGenericUpdate);
+    socket.on("gigDeleted", handleGenericUpdate);
 
     return () => {
       socket.off("notification", handleNotification);
       socket.off("newMessage", handleNewMessage);
       socket.off("messagesSeen", handleMessagesSeen);
       socket.off("navbarUnreadUpdate", handleNavbarUnreadUpdate);
+      socket.off("bidHired", handleGenericUpdate);
+      socket.off("bidPlaced", handleGenericUpdate);
+      socket.off("bidResubmitted", handleGenericUpdate);
+      socket.off("gigDeleted", handleGenericUpdate);
     };
   }, [user, socket, fetchNotifications, showToast]);
 
@@ -115,16 +146,16 @@ export function NotificationProvider({ children }) {
     return () => clearInterval(id);
   }, [fetchNotifications, user]);
 
-  const markOneAsRead = async (id) => {
+  const markOneAsRead = useCallback(async (id) => {
     try {
       await api.put(`/notifications/${id}/read`);
       setNotifications((prev) =>
         prev.map((n) => (n._id === id ? { ...n, isRead: true, read: true } : n))
       );
     } catch { /* silent */ }
-  };
+  }, []);
 
-  const markAllRead = async (role) => {
+  const markAllRead = useCallback(async (role) => {
     try {
       const actualRole = (typeof role === "string") ? role : undefined;
       const url = actualRole ? `/notifications/mark-all-read?role=${actualRole}` : "/notifications/mark-all-read";
@@ -133,35 +164,45 @@ export function NotificationProvider({ children }) {
         prev.map((n) => (actualRole ? n.meta?.role === actualRole : true) ? { ...n, isRead: true, read: true } : n)
       );
     } catch { /* silent */ }
-  };
+  }, []);
 
-  const deleteOne = async (id) => {
+  const deleteOne = useCallback(async (id) => {
     try {
       await api.delete(`/notifications/${id}/delete`);
       setNotifications((prev) => prev.filter((n) => n._id !== id));
     } catch { /* silent */ }
-  };
+  }, []);
 
-  const clearAll = async () => {
+  const clearAll = useCallback(async () => {
     try {
       await api.delete("/notifications/clear-all");
       setNotifications([]);
     } catch { /* silent */ }
-  };
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    notifications,
+    fetchNotifications,
+    markOneAsRead,
+    markAllRead,
+    deleteOne,
+    clearAll,
+    unreadMessages,
+    setUnreadMessages,
+    refreshTrigger
+  }), [
+    notifications,
+    fetchNotifications,
+    markOneAsRead,
+    markAllRead,
+    deleteOne,
+    clearAll,
+    unreadMessages,
+    refreshTrigger
+  ]);
 
   return (
-    <NotificationContext.Provider
-      value={{
-        notifications,
-        fetchNotifications,
-        markOneAsRead,
-        markAllRead,
-        deleteOne,
-        clearAll,
-        unreadMessages,
-        setUnreadMessages
-      }}
-    >
+    <NotificationContext.Provider value={contextValue}>
       {children}
     </NotificationContext.Provider>
   );

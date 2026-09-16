@@ -42,7 +42,7 @@ export const syncBidToConversation = async (bid, actorId = null, options = {}) =
       }
 
       // If actorId is provided and isMilestone is true, handle system message and unread count
-      const isMilestone = ["hired", "completed", "cancelled"].includes(bid.status) || options.systemMessageText;
+      const isMilestone = ["hired", "in_progress", "submitted", "completed", "withdrawn"].includes(bid.status) || options.systemMessageText;
 
       if (actorId && isMilestone) {
         const Message = (await import("../models/message.js")).default;
@@ -55,8 +55,8 @@ export const syncBidToConversation = async (bid, actorId = null, options = {}) =
             msgText = "Freelancer hired. Project started!";
           } else if (bid.status === "completed") {
             msgText = "Order has been completed.";
-          } else if (bid.status === "cancelled") {
-            msgText = "Order has been cancelled.";
+          } else if (bid.status === "withdrawn") {
+            msgText = "Bid has been withdrawn.";
           } else {
             msgText = `Bid status updated to ${bid.status}`;
           }

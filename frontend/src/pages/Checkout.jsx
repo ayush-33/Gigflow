@@ -134,8 +134,9 @@ export default function Checkout() {
             {method === "card" && (
               <>
                 <div className="form-group">
-                  <label>Card Number</label>
+                  <label htmlFor="cardNumber">Card Number</label>
                   <input
+                    id="cardNumber"
                     placeholder="1234 5678 9012 3456"
                     value={card.number}
                     onChange={e => setCard(p => ({...p, number: formatCard(e.target.value)}))}
@@ -144,8 +145,9 @@ export default function Checkout() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Cardholder Name</label>
+                  <label htmlFor="cardName">Cardholder Name</label>
                   <input
+                    id="cardName"
                     placeholder="John Doe"
                     value={card.name}
                     onChange={e => setCard(p => ({...p, name: e.target.value}))}
@@ -154,8 +156,9 @@ export default function Checkout() {
                 </div>
                 <div className="form-row-2">
                   <div className="form-group">
-                    <label>Expiry Date</label>
+                    <label htmlFor="cardExpiry">Expiry Date</label>
                     <input
+                      id="cardExpiry"
                       placeholder="MM/YY"
                       value={card.expiry}
                       onChange={e => setCard(p => ({...p, expiry: formatExpiry(e.target.value)}))}
@@ -164,8 +167,9 @@ export default function Checkout() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>CVV</label>
+                    <label htmlFor="cardCvv">CVV</label>
                     <input
+                      id="cardCvv"
                       type="password"
                       placeholder="•••"
                       value={card.cvv}
@@ -180,8 +184,8 @@ export default function Checkout() {
 
             {method === "upi" && (
               <div className="form-group">
-                <label>UPI ID</label>
-                <input placeholder="yourname@upi" required />
+                <label htmlFor="upiId">UPI ID</label>
+                <input id="upiId" placeholder="yourname@upi" required />
                 <span className="form-hint">e.g. mobile@paytm, user@gpay</span>
               </div>
             )}

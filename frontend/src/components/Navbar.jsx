@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import NotificationBell from "./NotificationBell";
 import { useNotifications } from "../context/NotificationContext";
@@ -73,9 +73,9 @@ export default function Navbar() {
       <nav className={`navbar${scrolled ? " scrolled" : ""}`}>
         <div className="navbar-container">
 
-          <div className="navbar-logo" onClick={() => handleNavigation("/")}>
+          <Link className="navbar-logo" to="/" onClick={() => setIsMenuOpen(false)}>
             GigFlow
-          </div>
+          </Link>
 
           <button
             className={`hamburger${isMenuOpen ? " active" : ""}`}
@@ -137,7 +137,7 @@ export default function Navbar() {
               ) : (
                 <div className="user-section">
 
-                  <div className="nav-profile" onClick={() => handleNavigation("/profile")}>
+                  <Link className="nav-profile" to="/profile" onClick={() => setIsMenuOpen(false)}>
                     <div className="profile-avatar">
                       {user.name ? user.name.charAt(0).toUpperCase() : "U"}
                     </div>
@@ -147,7 +147,7 @@ export default function Navbar() {
                     </div>
                     <span className="profile-chevron-desktop">▾</span>
                     <FiChevronRight className="profile-chevron-mobile" />
-                  </div>
+                  </Link>
 
                   <NotificationBell />
 

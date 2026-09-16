@@ -1,0 +1,1223 @@
+/* ==========================================================================
+   Received Bids Tab — receivedbids.css
+   Responsive layout:
+   Desktop  -> 2 / 3 / 4 button layouts as defined below
+   Mobile   -> ALL action buttons stacked vertically
+   ========================================================================== */
+
+:root {
+    --text-primary: #ffffff;
+    --text-secondary: #c7cbd4;
+    --text-muted: #8b93a3;
+    --danger: #f05252;
+    --accent: #4f8ff7;
+    --success: #3ecf8e;
+    --purple: #a56bff;
+    --amber: #ffb84c;
+}
+
+
+/* ==========================================================================
+   SECTION WRAPPER
+   ========================================================================== */
+
+.section-card {
+    background: #12141c;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.section-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 16px;
+}
+
+.section-card-title {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: clamp(16px, 1.1vw + 13px, 20px);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.section-card-title-icon {
+    font-size: 20px;
+}
+
+.section-card-action {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 6px 4px;
+}
+
+.section-card-action:hover {
+    text-decoration: underline;
+}
+
+.sidebar-badge {
+    background: rgba(240, 82, 82, 0.15);
+    color: var(--danger);
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+
+/* ==========================================================================
+   FILTERS
+   ========================================================================== */
+
+.section-card-filters {
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+}
+
+.segmented-filters {
+    display: inline-flex;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 6px;
+    border-radius: 12px;
+    min-width: min-content;
+    box-sizing: border-box;
+}
+
+.filter-btn {
+    border: none;
+    background: transparent;
+    color: #9aa3b2;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    text-transform: capitalize;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.filter-btn:hover {
+    color: #fff;
+}
+
+.filter-btn.active {
+    background: #3b7cf6;
+    color: #fff;
+}
+
+
+/* ==========================================================================
+   BID GRID
+   ========================================================================== */
+
+.my-gigs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    align-items: start;
+}
+
+
+/* ==========================================================================
+   BID CARD
+   ========================================================================== */
+
+.bid-card-new {
+    display: flex;
+    flex-direction: column;
+
+    background: #171923;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 14px;
+    padding: 20px;
+
+    box-sizing: border-box;
+
+    transition: border-color 0.15s ease;
+}
+
+.bid-card-new:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+
+/* ==========================================================================
+   HEADER
+   ========================================================================== */
+
+.card-header-section {
+    margin-bottom: 16px;
+}
+
+.received-bid-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.freelancer-profile-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.freelancer-avatar-large {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4f8ff7, #3b6fe0);
+    color: #fff;
+    font-weight: 700;
+    font-size: 17px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.freelancer-info-block {
+    min-width: 0;
+}
+
+.freelancer-name {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.freelancer-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    font-size: 12.5px;
+    color: var(--text-muted);
+
+    margin-top: 3px;
+    flex-wrap: wrap;
+}
+
+.freelancer-rating {
+    color: var(--amber);
+    font-weight: 600;
+}
+
+.freelancer-divider {
+    color: var(--text-muted);
+}
+
+.freelancer-completed-projects {
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.bid-card-title-link {
+    line-height: 1.5;
+}
+
+.gig-link {
+    color: var(--accent);
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.gig-link:hover {
+    text-decoration: underline;
+}
+
+
+/* ==========================================================================
+   CONTENT
+   ========================================================================== */
+
+.card-content-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+
+/* ==========================================================================
+   BID DETAILS
+   ========================================================================== */
+
+.bid-card-details-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+
+    padding: 12px 10px;
+}
+
+.bid-detail-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    gap: 4px;
+    text-align: center;
+    min-width: 0;
+}
+
+.bid-detail-label {
+    font-size: 11px;
+    color: var(--text-muted);
+
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+
+    white-space: nowrap;
+}
+
+.bid-detail-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #e6e8ec;
+
+    white-space: nowrap;
+}
+
+.bid-detail-value.price {
+    color: var(--success);
+}
+
+
+/* ==========================================================================
+   PROPOSAL
+   ========================================================================== */
+
+.bid-proposal-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bid-proposal-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.bid-proposal-section p {
+    margin: 0;
+
+    font-size: 14px;
+    line-height: 1.55;
+
+    color: var(--text-secondary);
+}
+
+.card-description-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+
+    overflow: hidden;
+}
+
+.expand-proposal-btn {
+    align-self: flex-start;
+
+    background: none;
+    border: none;
+
+    color: var(--accent);
+
+    font-size: 13px;
+    font-weight: 600;
+
+    cursor: pointer;
+    padding: 4px 0 0;
+}
+
+.expand-proposal-btn:hover {
+    text-decoration: underline;
+}
+
+
+/* ==========================================================================
+   REVISION NOTES
+   ========================================================================== */
+
+.revision-notes-container {
+    background: rgba(240, 82, 82, 0.08);
+    border: 1px solid rgba(240, 82, 82, 0.2);
+
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+
+/* ==========================================================================
+   SPACER
+   ========================================================================== */
+
+.spacer-grow {
+    flex: 1 1 auto;
+    min-height: 16px;
+
+    margin: 0;
+    padding: 0;
+}
+
+
+/* ==========================================================================
+   FOOTER
+   ========================================================================== */
+
+.card-footer-section {
+    flex: 0 0 auto;
+
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+
+    margin: 0;
+    padding: 0;
+
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+    box-sizing: border-box;
+}
+
+
+/* ==========================================================================
+   ACTION GROUP
+   ========================================================================== */
+
+.card-actions-group {
+    display: grid;
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: row;
+
+    align-items: stretch;
+
+    gap: 10px;
+
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+
+    margin: 10px 0 0;
+    padding: 0;
+
+    box-sizing: border-box;
+
+    overflow: visible;
+}
+
+
+/* 2 BUTTONS — DESKTOP */
+
+.card-actions-group.cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+
+/* 3 BUTTONS — DESKTOP */
+
+.card-actions-group.cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+
+/* 4 BUTTONS — DESKTOP = 2 × 2 */
+
+.card-actions-group.cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, auto);
+}
+
+
+/* ==========================================================================
+   TOOLBAR BUTTON
+   ========================================================================== */
+
+.toolbar-btn {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+
+    border: none;
+    border-radius: 8px;
+
+    padding: 9px 10px;
+
+    min-height: 42px;
+
+    margin: 0;
+
+    box-sizing: border-box;
+
+    font-size: 13px;
+    line-height: 1.25;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    white-space: normal;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+
+    text-align: center;
+
+    transition:
+        filter 0.15s ease,
+        transform 0.1s ease;
+}
+
+.toolbar-btn:hover {
+    filter: brightness(1.1);
+}
+
+.toolbar-btn:active {
+    transform: scale(0.97);
+}
+
+.toolbar-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+
+    filter: none;
+    transform: none;
+}
+
+
+/* ==========================================================================
+   BUTTON COLORS
+   ========================================================================== */
+
+.btn-primary {
+    background: #3b7cf6;
+    color: #fff;
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e6e8ec;
+}
+
+.btn-danger {
+    background: rgba(240, 82, 82, 0.12);
+    color: var(--danger);
+}
+
+.btn-success {
+    background: rgba(62, 207, 142, 0.14);
+    color: var(--success);
+}
+
+.btn-purple {
+    background: rgba(165, 107, 255, 0.14);
+    color: var(--purple);
+}
+
+
+/* ==========================================================================
+   STATUS BADGES
+   ========================================================================== */
+
+.badge {
+    display: inline-flex;
+
+    align-items: center;
+    gap: 6px;
+
+    font-size: 12.5px;
+    font-weight: 600;
+
+    padding: 5px 12px;
+
+    border-radius: 999px;
+
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.badge::before {
+    content: "";
+
+    width: 6px;
+    height: 6px;
+
+    border-radius: 50%;
+
+    background: currentColor;
+}
+
+.badge-pending,
+.badge-countered {
+    background: rgba(255, 184, 76, 0.14);
+    color: var(--amber);
+}
+
+.badge-rejected {
+    background: rgba(240, 82, 82, 0.12);
+    color: var(--danger);
+}
+
+.badge-hired,
+.badge-in_progress,
+.badge-active {
+    background: rgba(79, 143, 247, 0.14);
+    color: var(--accent);
+}
+
+.badge-submitted {
+    background: rgba(165, 107, 255, 0.14);
+    color: var(--purple);
+}
+
+.badge-completed {
+    background: rgba(62, 207, 142, 0.12);
+    color: var(--success);
+}
+
+.badge-payment_pending {
+    background: rgba(165, 107, 255, 0.14);
+    color: var(--purple);
+}
+
+
+/* ==========================================================================
+   EMPTY STATE
+   ========================================================================== */
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    text-align: center;
+
+    padding: 48px 16px;
+
+    color: var(--text-muted);
+}
+
+.empty-state-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+}
+
+.empty-state-title {
+    font-size: 16px;
+    font-weight: 700;
+
+    color: #e6e8ec;
+
+    margin-bottom: 6px;
+}
+
+.empty-state-sub {
+    font-size: 13.5px;
+
+    max-width: 340px;
+
+    line-height: 1.5;
+
+    margin-bottom: 16px;
+}
+
+.empty-state-action {
+    background: #3b7cf6;
+    color: #fff;
+
+    border: none;
+    border-radius: 8px;
+
+    padding: 10px 18px;
+
+    font-size: 13.5px;
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+
+
+/* --------------------------------------------------------------------------
+   WIDE DESKTOP
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 1440px) {
+    .my-gigs-grid {
+        grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+        gap: 24px;
+    }
+}
+
+
+/* --------------------------------------------------------------------------
+   DESKTOP
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 769px) {
+
+    .card-actions-group {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .card-actions-group.cols-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .card-actions-group.cols-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: repeat(2, auto);
+    }
+
+    .card-actions-group .toolbar-btn {
+        min-width: 0;
+    }
+}
+
+
+/* --------------------------------------------------------------------------
+   STANDARD DESKTOP / SMALL LAPTOP
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1199px) {
+    .my-gigs-grid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 18px;
+    }
+}
+
+
+/* --------------------------------------------------------------------------
+   TABLET LANDSCAPE
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1024px) {
+
+    .section-card {
+        padding: 20px;
+    }
+
+    .my-gigs-grid {
+        grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+        gap: 16px;
+    }
+
+    .bid-card-new {
+        padding: 18px;
+    }
+}
+
+
+/* --------------------------------------------------------------------------
+   TABLET PORTRAIT / PHABLET
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 900px) and (min-width: 601px) {
+
+    .my-gigs-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+}
+
+
+/* --------------------------------------------------------------------------
+   SMALL TABLET
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 768px) {
+
+    .section-card-header {
+        flex-wrap: wrap;
+    }
+
+    .bid-card-new {
+        padding: 16px;
+    }
+
+    .bid-card-details-grid {
+        padding: 11px 8px;
+        gap: 8px;
+    }
+}
+
+
+/* --------------------------------------------------------------------------
+   MOBILE / PHABLET
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 600px) {
+
+    .my-gigs-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .section-card {
+        padding: 18px 16px;
+    }
+}
+
+
+/* ==========================================================================
+   MOBILE PHONES
+   IMPORTANT:
+   ALL action buttons become ONE COLUMN.
+   This automatically works for 2, 3, or 4 buttons.
+   ========================================================================== */
+
+@media (max-width: 480px) {
+
+    .section-card {
+        padding: 16px 14px;
+        border-radius: 12px;
+    }
+
+
+    /* ----------------------------------------------------------------------
+       FILTERS
+       ---------------------------------------------------------------------- */
+
+    .section-card-header {
+        padding-bottom: 14px;
+        margin-bottom: 14px;
+    }
+
+    .section-card-filters {
+        width: 100%;
+        margin-bottom: 16px;
+        overflow: visible;
+    }
+
+    .segmented-filters {
+        display: grid;
+
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+
+        gap: 4px;
+
+        width: 100%;
+        min-width: 0;
+
+        padding: 5px;
+
+        box-sizing: border-box;
+    }
+
+    .filter-btn {
+        width: 100%;
+        min-width: 0;
+
+        padding: 6px 8px;
+
+        font-size: 12px;
+        line-height: 1.2;
+
+        text-align: center;
+
+        box-sizing: border-box;
+    }
+
+
+    /* ----------------------------------------------------------------------
+       BID CARD
+       ---------------------------------------------------------------------- */
+
+    .bid-card-new {
+        width: 100%;
+
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+
+        padding: 14px;
+
+        border-radius: 12px;
+
+        box-sizing: border-box;
+
+        overflow: visible !important;
+    }
+
+    .freelancer-avatar-large {
+        width: 38px;
+        height: 38px;
+        font-size: 15px;
+    }
+
+    .freelancer-name {
+        font-size: 14.5px;
+    }
+
+    .freelancer-meta-row {
+        font-size: 12px;
+    }
+
+    .bid-card-title-link {
+        margin-top: 10px !important;
+        font-size: 13px !important;
+    }
+
+    .card-content-section {
+        gap: 12px;
+    }
+
+
+    /* ----------------------------------------------------------------------
+       DETAILS
+       ---------------------------------------------------------------------- */
+
+    .bid-card-details-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+
+        padding: 10px 6px;
+
+        gap: 6px;
+
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .bid-detail-label {
+        font-size: 9.5px;
+    }
+
+    .bid-detail-value {
+        font-size: 12.5px;
+    }
+
+    .bid-proposal-section p {
+        font-size: 13.5px;
+    }
+
+
+    /* ----------------------------------------------------------------------
+       FOOTER
+       ---------------------------------------------------------------------- */
+
+    .bid-card-new .card-footer-section {
+        width: 100% !important;
+
+        height: auto !important;
+        min-height: 0 !important;
+
+        flex: 0 0 auto !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box;
+    }
+
+
+    /* ----------------------------------------------------------------------
+       ACTION GROUP
+       
+       THIS IS THE IMPORTANT FIX.
+
+       Regardless of cols-2 / cols-3 / cols-4,
+       mobile always uses ONE COLUMN.
+       ---------------------------------------------------------------------- */
+
+    .bid-card-new .card-actions-group,
+    .bid-card-new .card-actions-group.cols-2,
+    .bid-card-new .card-actions-group.cols-3,
+    .bid-card-new .card-actions-group.cols-4 {
+
+        display: grid !important;
+
+        grid-template-columns: minmax(0, 1fr) !important;
+
+        grid-template-rows: none !important;
+
+        grid-auto-flow: row !important;
+
+        grid-auto-rows: auto !important;
+
+        gap: 8px !important;
+
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+
+        height: auto !important;
+        min-height: 0 !important;
+
+        margin: 8px 0 0 !important;
+        padding: 0 !important;
+
+        overflow: visible !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    /* ----------------------------------------------------------------------
+       BUTTONS
+
+       Each button occupies exactly one row.
+       ---------------------------------------------------------------------- */
+
+    .bid-card-new .card-actions-group>.toolbar-btn,
+    .bid-card-new .card-actions-group.cols-2>.toolbar-btn,
+    .bid-card-new .card-actions-group.cols-3>.toolbar-btn,
+    .bid-card-new .card-actions-group.cols-4>.toolbar-btn {
+
+        display: flex !important;
+
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+
+        height: auto !important;
+        min-height: 42px !important;
+        max-height: none !important;
+
+        margin: 0 !important;
+
+        padding: 9px 10px !important;
+
+        align-items: center !important;
+        justify-content: center !important;
+
+        box-sizing: border-box !important;
+
+        font-size: 12px !important;
+        line-height: 1.2 !important;
+
+        white-space: normal !important;
+        overflow: visible !important;
+        overflow-wrap: anywhere !important;
+
+        text-align: center !important;
+    }
+
+
+    /* The desktop cols-4 2×2 layout is disabled on mobile. */
+    .bid-card-new .card-actions-group.cols-4 {
+        grid-template-rows: none !important;
+    }
+
+
+    .badge {
+        font-size: 12px;
+        padding: 4px 10px;
+    }
+}
+
+
+/* ==========================================================================
+   EXTRA SMALL PHONES
+   ========================================================================== */
+
+@media (max-width: 375px) {
+
+    .section-card {
+        padding: 14px 12px;
+    }
+
+    .freelancer-avatar-large {
+        width: 34px;
+        height: 34px;
+        font-size: 14px;
+    }
+
+    .freelancer-name {
+        font-size: 14px;
+    }
+
+    .bid-card-details-grid {
+        padding: 9px 4px;
+        gap: 4px;
+    }
+
+    .bid-detail-label {
+        font-size: 9px;
+        letter-spacing: 0;
+    }
+
+    .bid-detail-value {
+        font-size: 12px;
+    }
+
+
+    /* Keep ONE column on very small phones too. */
+    .bid-card-new .card-actions-group,
+    .bid-card-new .card-actions-group.cols-2,
+    .bid-card-new .card-actions-group.cols-3,
+    .bid-card-new .card-actions-group.cols-4 {
+
+        grid-template-columns: minmax(0, 1fr) !important;
+
+        grid-template-rows: none !important;
+
+        gap: 7px !important;
+    }
+
+    .bid-card-new .card-actions-group>.toolbar-btn {
+        width: 100% !important;
+
+        min-height: 40px !important;
+
+        height: auto !important;
+        max-height: none !important;
+
+        padding: 8px 10px !important;
+
+        font-size: 11.5px !important;
+    }
+}
+
+
+/* ==========================================================================
+   LANDSCAPE PHONES
+   ========================================================================== */
+
+@media (max-height: 480px) and (orientation: landscape) {
+
+    .card-description-clamp-3 {
+        -webkit-line-clamp: 2;
+    }
+
+    .bid-card-new {
+        padding: 14px;
+    }
+}
+
+
+/* ==========================================================================
+   TOUCH DEVICES
+   ========================================================================== */
+
+@media (hover: none) and (pointer: coarse) {
+
+    .toolbar-btn {
+        padding-top: 9px;
+        padding-bottom: 9px;
+        min-height: 42px;
+    }
+
+    .filter-btn {
+        min-height: 36px;
+    }
+
+    .expand-proposal-btn,
+    .gig-link {
+        padding: 4px 0;
+    }
+}
+
+
+/* ==========================================================================
+   FINAL LAYOUT SAFETY
+   ========================================================================== */
+
+.bid-card-new,
+.card-header-section,
+.card-content-section,
+.my-gigs-grid,
+.card-footer-section,
+.card-actions-group {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.card-actions-group>.toolbar-btn {
+    min-width: 0 !important;
+    max-width: 100%;
+}
+
+
+/* ==========================================================================
+   FINAL MOBILE OVERRIDE
+   Keep this LAST so no previous rule can change mobile buttons back
+   to two columns.
+   ========================================================================== */
+
+@media (max-width: 480px) {
+
+    .card-footer-section {
+        width: 100%;
+    }
+
+    .card-actions-group,
+    .card-actions-group.cols-2,
+    .card-actions-group.cols-3,
+    .card-actions-group.cols-4 {
+        display: grid !important;
+
+        grid-template-columns: 1fr !important;
+        grid-template-rows: none !important;
+
+        grid-auto-flow: row !important;
+        grid-auto-rows: auto !important;
+
+        gap: 8px !important;
+
+        width: 100% !important;
+        max-width: 100% !important;
+
+        height: auto !important;
+        min-height: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .card-actions-group>.toolbar-btn {
+        width: 100% !important;
+
+        height: auto !important;
+        min-height: 42px !important;
+        max-height: none !important;
+
+        margin: 0 !important;
+
+        box-sizing: border-box !important;
+    }
+}

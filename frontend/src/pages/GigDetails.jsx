@@ -4,20 +4,11 @@ import api from "../api/api";
 import ReviewSection from "../components/ReviewSection";
 import { useAuth } from "../context/AuthContext";
 import ConfirmModal from "../components/ConfirmModal";
+import StarRating from "../components/StarRating";
+import Modal from "../components/Modal";
 import toast from "react-hot-toast";
 
 import "../styles/GigDetails.css";
-
-function StarRating({ score = 4.5 }) {
-  const full  = Math.floor(score);
-  const half  = score % 1 >= 0.5 ? 1 : 0;
-  const empty = 5 - full - half;
-  return (
-    <span className="stars">
-      {"★".repeat(full)}{half ? "½" : ""}{"☆".repeat(empty)}
-    </span>
-  );
-}
 
 export default function GigDetails() {
   const { id }   = useParams();
@@ -312,7 +303,7 @@ const reviewCount = gig.reviewCount || 0;
                     })
                   }
                 >
-                  💳 Pay & Hire Now
+                  <span className="btn-icon">💳</span> Pay & Hire Now
                 </button>
               )}
 
@@ -352,14 +343,14 @@ const reviewCount = gig.reviewCount || 0;
                     }
                   })}
                 >
-                  💬 Message Client
+                  <span className="btn-icon">💬</span> Message Client
                 </button>
               )}
 
               {/* Freelancer workflow actions */}
               {user && !isOwner && bidStatus?.bidStatus && ["hired", "in_progress"].includes(bidStatus.bidStatus) && ["hired", "in_progress"].includes(gig.status) && (
                 <button className="btn-bid" style={{ background: "#10b981", borderColor: "#10b981", marginTop: "8px" }} onClick={() => handleLifecycleAction("submit-work")}>
-                  📤 Submit Work for Review
+                  <span className="btn-icon">📤</span> Submit Work for Review
                 </button>
               )}
               {user && !isOwner && bidStatus?.bidStatus === "submitted" && gig.status === "submitted" && (
@@ -381,10 +372,10 @@ const reviewCount = gig.reviewCount || 0;
                   </div>
                   <div style={{ display: "flex", gap: "8px" }}>
                     <button className="btn-bid" style={{ background: "#10b981", borderColor: "#10b981", flex: 1 }} onClick={() => handleLifecycleAction("approve-work")}>
-                      ✓ Approve
+                      <span className="btn-icon">✓</span> Approve
                     </button>
                     <button className="btn-delete" style={{ background: "#f59e0b", borderColor: "#d97706", color: "#fff", flex: 1 }} onClick={() => setShowRevisionModal(true)}>
-                      ↩ Revisions
+                      <span className="btn-icon">↩</span> Revisions
                     </button>
                   </div>
                 </div>
@@ -413,7 +404,7 @@ const reviewCount = gig.reviewCount || 0;
       }
     })}
   >
-    💬 Message Freelancer
+    <span className="btn-icon">💬</span> Message Freelancer
   </button>
 )}
 
@@ -428,10 +419,10 @@ const reviewCount = gig.reviewCount || 0;
               { user && isOwner && (
                 <div className="owner-actions-row">
                   <button className="btn-bid" onClick={() => navigate(`/edit-gig/${id}`)}>
-                    ✏️ Edit Gig
+                    <span className="btn-icon">✏️</span> Edit Gig
                   </button>
                   <button className="btn-delete" onClick={handleDelete}>
-                    🗑 Delete Gig
+                    <span className="btn-icon">🗑</span> Delete Gig
                   </button>
                 </div>
               )}
@@ -461,32 +452,31 @@ const reviewCount = gig.reviewCount || 0;
 
       <ConfirmModal modal={modal} onClose={() => setModal(null)} />
 
-      {showRevisionModal && (
-        <div className="modal-overlay" onClick={() => setShowRevisionModal(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px' }}>
-            <div className="modal-title">Request Revisions</div>
-            <form onSubmit={handleRevisionSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '12px' }}>
-              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '13px', fontWeight: '600' }}>Revision Notes / Required Changes</label>
-                <textarea
-                  style={{ padding: '10px', width: '100%', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: 'inherit' }}
-                  rows={6}
-                  placeholder="Describe the changes or adjustments you need the freelancer to make..."
-                  value={revisionNotes}
-                  onChange={(e) => setRevisionNotes(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
-                <button type="button" className="btn-secondary" style={{ padding: '10px 20px', borderRadius: '8px' }} onClick={() => setShowRevisionModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary btn-danger" style={{ padding: '10px 20px', borderRadius: '8px' }} disabled={isSubmittingRevision}>
-                  {isSubmittingRevision ? "Sending..." : "Request Changes"}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showRevisionModal}
+        onClose={() => setShowRevisionModal(false)}
+        title="Request Revisions"
+      >
+        <form onSubmit={handleRevisionSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '13px', fontWeight: '600' }}>Revision Notes / Required Changes</label>
+            <textarea
+              style={{ padding: '10px', width: '100%', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: 'inherit' }}
+              rows={6}
+              placeholder="Describe the changes or adjustments you need the freelancer to make..."
+              value={revisionNotes}
+              onChange={(e) => setRevisionNotes(e.target.value)}
+              required
+            />
           </div>
-        </div>
-      )}
+          <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+            <button type="button" className="btn-secondary" style={{ padding: '10px 20px', borderRadius: '8px' }} onClick={() => setShowRevisionModal(false)}>Cancel</button>
+            <button type="submit" className="btn-primary btn-danger" style={{ padding: '10px 20px', borderRadius: '8px' }} disabled={isSubmittingRevision}>
+              {isSubmittingRevision ? "Sending..." : "Request Changes"}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

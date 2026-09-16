@@ -3,19 +3,19 @@
    ═══════════════════════════════════════ */
 
 :root {
-  --chat-bg-base:     #0f1117;
-  --chat-bg-sidebar:  #13161f;
-  --chat-bg-card:     #1a1d27;
-  --chat-bg-card-hvr: #1e2235;
-  --chat-bg-input:    #1e2235;
-  --chat-text-pri:    #f1f5f9;
-  --chat-text-sec:    #94a3b8;
-  --chat-text-mut:    #64748b;
-  --chat-border:      rgba(255, 255, 255, 0.08);
-  --chat-brand:       #3b82f6;
-  --chat-brand-glow:  rgba(59, 130, 246, 0.25);
-  --chat-success:     #10b981;
-  --chat-danger:      #ef4444;
+  --chat-bg-base:     var(--bg-base);
+  --chat-bg-sidebar:  var(--bg-sidebar);
+  --chat-bg-card:     var(--bg-card);
+  --chat-bg-card-hvr: var(--bg-card-hover);
+  --chat-bg-input:    var(--bg-input);
+  --chat-text-pri:    var(--text-primary);
+  --chat-text-sec:    var(--text-secondary);
+  --chat-text-mut:    var(--text-muted);
+  --chat-border:      var(--border);
+  --chat-brand:       var(--brand);
+  --chat-brand-glow:  var(--brand-glow);
+  --chat-success:     var(--success);
+  --chat-danger:      var(--danger);
 }
 
 /* ── Page layout ── */
@@ -32,8 +32,8 @@
    SIDEBAR (WhatsApp style)
    ══════════════════════════════════════ */
 .chat-sidebar {
-  width: 340px;
-  min-width: 300px;
+  width: 30%;
+  min-width: 280px;
   background: var(--chat-bg-sidebar);
   border-right: 1px solid var(--chat-border);
   display: flex;
@@ -685,4 +685,16 @@
   line-height: 1.2;
   white-space: nowrap;
   display: inline-block;
+}
+
+/* ── TOUCH TARGETS & RESPONSIVENESS (320px to 430px) ── */
+@media (max-width: 430px) {
+  .chat-input-area button,
+  .chat-back-btn {
+    min-height: 44px;
+    padding: 10px 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }

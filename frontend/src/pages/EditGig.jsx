@@ -26,13 +26,38 @@ export default function EditGig() {
 
   const [gig, setGig] = useState({
     title: "", description: "", price: "",
-    category: "", deliveryTime: "",
+    category: "", deliveryTime: "", tags: [],
   });
+  const [tagInput, setTagInput] = useState("");
   const [image,   setImage]   = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetching,setFetching]= useState(true);
   const [changed, setChanged] = useState(false);
+
+  const handleTagKeyDown = (e) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      const val = tagInput.trim().toLowerCase().replace(/[^a-zA-Z0-9-]/g, "");
+      if (!val) return;
+      if (gig.tags.includes(val)) {
+        setTagInput("");
+        return;
+      }
+      if (gig.tags.length >= 5) {
+        showToast("Maximum 5 tags allowed.", "error");
+        return;
+      }
+      setGig((p) => ({ ...p, tags: [...p.tags, val] }));
+      setTagInput("");
+      setChanged(true);
+    }
+  };
+
+  const removeTag = (tagToRemove) => {
+    setGig((p) => ({ ...p, tags: p.tags.filter((t) => t !== tagToRemove) }));
+    setChanged(true);
+  };
 
   const showToast = (message, type = "success") => {
     if (type === "success") {
@@ -53,6 +78,7 @@ const { data } = await api.get(`/gigs/${id}`);
           price:        data.price        || "",
           category:     data.category     || "",
           deliveryTime: data.deliveryTime || "",
+          tags:         Array.isArray(data.tags) ? data.tags : [],
         });
         if (data.image) setPreview(`http://localhost:5001/uploads/${data.image}`);
       } catch {
@@ -87,6 +113,7 @@ const { data } = await api.get(`/gigs/${id}`);
     fd.append("price",        gig.price);
     fd.append("category",     gig.category);
     fd.append("deliveryTime", gig.deliveryTime);
+    fd.append("tags",         gig.tags ? gig.tags.join(",") : "");
 
     if (image) fd.append("image", image);
 
@@ -196,6 +223,30 @@ const { data } = await api.get(`/gigs/${id}`);
                   <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="tags-input">
+                Tags / Skills <span className="form-hint">(Max 5, press Enter or comma to add)</span>
+              </label>
+              <div className="tags-input-container">
+                <input
+                  id="tags-input"
+                  className="form-input"
+                  placeholder="e.g., logo, web-design, react"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                />
+                <div className="tags-list" style={{ marginTop: '8px' }}>
+                  {gig.tags && gig.tags.map((tag) => (
+                    <span key={tag} className="tag-badge">
+                      #{tag}
+                      <button type="button" onClick={() => removeTag(tag)}>✕</button>
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Description */}

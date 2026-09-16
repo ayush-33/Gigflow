@@ -1,0 +1,999 @@
+/* =========================================================
+   PROFILE COMMON
+   Badge + Empty State + Bid Comparison
+   ========================================================= */
+
+
+/* =========================================================
+   CSS VARIABLES
+   ========================================================= */
+
+:root {
+    --pc-bg-card: #191c26;
+    --pc-bg-card-hover: #1d212d;
+    --pc-bg-soft: #20242f;
+    --pc-border: rgba(255, 255, 255, 0.08);
+
+    --pc-text-primary: #f5f7ff;
+    --pc-text-secondary: #aeb6c8;
+    --pc-text-muted: #7f889b;
+
+    --pc-blue: #3f82f5;
+    --pc-blue-light: #62a0ff;
+
+    --pc-green: #20d7a0;
+    --pc-red: #ef5350;
+    --pc-yellow: #ffc83d;
+    --pc-purple: #b783ff;
+
+    --pc-radius-lg: 18px;
+    --pc-radius-md: 12px;
+    --pc-radius-sm: 8px;
+
+    --pc-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.18);
+
+    --pc-transition: 0.2s ease;
+}
+
+
+/* =========================================================
+   STATUS BADGES
+   ========================================================= */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: fit-content;
+    max-width: 100%;
+
+    min-height: 30px;
+    padding: 5px 11px;
+
+    border: 1px solid transparent;
+    border-radius: 999px;
+
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    flex-shrink: 0;
+
+    box-sizing: border-box;
+}
+
+
+/* Open */
+
+.badge-open {
+    color: #62a0ff;
+    background: rgba(63, 130, 245, 0.12);
+    border-color: rgba(63, 130, 245, 0.28);
+}
+
+
+/* Active */
+
+.badge-active {
+    color: #62a0ff;
+    background: rgba(63, 130, 245, 0.12);
+    border-color: rgba(63, 130, 245, 0.28);
+}
+
+
+/* Hired / In Progress */
+
+.badge-hired {
+    color: #b783ff;
+    background: rgba(183, 131, 255, 0.12);
+    border-color: rgba(183, 131, 255, 0.28);
+}
+
+
+/* Submitted */
+
+.badge-submitted {
+    color: #35c9ff;
+    background: rgba(53, 201, 255, 0.12);
+    border-color: rgba(53, 201, 255, 0.28);
+}
+
+
+/* Completed */
+
+.badge-completed {
+    color: #20d7a0;
+    background: rgba(32, 215, 160, 0.12);
+    border-color: rgba(32, 215, 160, 0.28);
+}
+
+
+/* Pending */
+
+.badge-pending {
+    color: #ffc83d;
+    background: rgba(255, 200, 61, 0.12);
+    border-color: rgba(255, 200, 61, 0.25);
+}
+
+
+/* Counter Offer */
+
+.badge-countered {
+    color: #b783ff;
+    background: rgba(183, 131, 255, 0.12);
+    border-color: rgba(183, 131, 255, 0.28);
+}
+
+
+/* Payment Pending */
+
+.badge-pending {
+    color: #ffc83d;
+    background: rgba(255, 200, 61, 0.12);
+    border-color: rgba(255, 200, 61, 0.25);
+}
+
+
+/* Closed */
+
+.badge-closed {
+    color: #aeb6c8;
+    background: rgba(174, 182, 200, 0.08);
+    border-color: rgba(174, 182, 200, 0.18);
+}
+
+
+/* Rejected */
+
+.badge-rejected {
+    color: #ef5350;
+    background: rgba(239, 83, 80, 0.10);
+    border-color: rgba(239, 83, 80, 0.24);
+}
+
+
+/* Withdrawn */
+
+.badge-withdrawn {
+    color: #aeb6c8;
+    background: rgba(174, 182, 200, 0.08);
+    border-color: rgba(174, 182, 200, 0.18);
+}
+
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
+.premium-empty-state {
+    width: 100%;
+    min-width: 0;
+
+    min-height: 250px;
+
+    padding: 35px 24px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+
+    text-align: center;
+}
+
+
+.premium-empty-state.compact {
+    min-height: 190px;
+
+    padding: 24px 14px;
+}
+
+
+/* Icon */
+
+.empty-state-icon-wrapper {
+    width: 50px;
+    height: 50px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin-bottom: 13px;
+
+    border: 1px solid var(--pc-border);
+    border-radius: 13px;
+
+    background: var(--pc-bg-soft);
+
+    box-sizing: border-box;
+}
+
+
+.empty-state-icon {
+    font-size: 22px;
+    line-height: 1;
+}
+
+
+/* Title */
+
+.empty-state-title {
+    margin: 0 0 8px;
+
+    color: var(--pc-text-primary);
+
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.3;
+
+    text-align: center;
+
+    overflow-wrap: anywhere;
+}
+
+
+/* Description */
+
+.empty-state-description {
+    width: 100%;
+    max-width: 480px;
+
+    margin: 0;
+
+    color: var(--pc-text-muted);
+
+    font-size: 13px;
+    line-height: 1.55;
+
+    text-align: center;
+
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+
+/* Action */
+
+.empty-state-btn {
+    width: 100%;
+    max-width: 220px;
+
+    margin-top: 16px;
+
+    min-height: 40px;
+    padding: 9px 16px;
+
+    border: 0;
+    border-radius: var(--pc-radius-sm);
+
+    background: var(--pc-blue);
+    color: #ffffff;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        background var(--pc-transition),
+        transform var(--pc-transition);
+}
+
+
+.empty-state-btn:hover {
+    background: var(--pc-blue-light);
+    transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   BID COMPARISON
+   ========================================================= */
+
+.bid-comparison {
+    width: 100%;
+    min-width: 0;
+
+    padding: 20px;
+
+    border: 1px solid var(--pc-border);
+    border-radius: var(--pc-radius-lg);
+
+    background: var(--pc-bg-card);
+
+    box-sizing: border-box;
+}
+
+
+/* Header */
+
+.bid-comparison-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    width: 100%;
+    min-width: 0;
+
+    gap: 12px;
+
+    margin-bottom: 18px;
+}
+
+
+.bch-title {
+    min-width: 0;
+
+    color: var(--pc-text-primary);
+
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+
+    overflow-wrap: anywhere;
+}
+
+
+.bch-sub {
+    min-width: 0;
+
+    color: var(--pc-text-muted);
+
+    font-size: 12px;
+    line-height: 1.4;
+
+    text-align: right;
+
+    overflow-wrap: anywhere;
+}
+
+
+/* =========================================================
+   COMPARISON GRID
+   ========================================================= */
+
+.bid-comparison-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 16px;
+
+    width: 100%;
+    min-width: 0;
+
+    align-items: start;
+}
+
+
+/* =========================================================
+   BID CARD
+   ========================================================= */
+
+.bid-comp-card {
+    position: relative;
+
+    width: 100%;
+    min-width: 0;
+
+    height: auto;
+    min-height: 0;
+
+    padding: 18px;
+
+    border: 1px solid var(--pc-border);
+    border-radius: var(--pc-radius-md);
+
+    background: var(--pc-bg-soft);
+
+    box-sizing: border-box;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+
+    transition:
+        border-color var(--pc-transition),
+        background var(--pc-transition),
+        transform var(--pc-transition);
+}
+
+
+.bid-comp-card:hover {
+    background: var(--pc-bg-card-hover);
+
+    border-color: rgba(98, 160, 255, 0.22);
+
+    transform: translateY(-1px);
+}
+
+
+/* Best value card */
+
+.bid-comp-card.best-value {
+    border-color: rgba(32, 215, 160, 0.25);
+}
+
+
+/* Best value label */
+
+.best-value-tag {
+    display: inline-flex;
+    align-items: center;
+
+    align-self: flex-start;
+
+    max-width: 100%;
+
+    margin-bottom: 12px;
+
+    padding: 5px 9px;
+
+    border-radius: 999px;
+
+    background: rgba(32, 215, 160, 0.10);
+    border: 1px solid rgba(32, 215, 160, 0.20);
+
+    color: var(--pc-green);
+
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.2;
+
+    white-space: nowrap;
+}
+
+
+/* Freelancer name */
+
+.bcc-name {
+    width: 100%;
+    min-width: 0;
+
+    color: var(--pc-text-primary);
+
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.35;
+
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+
+/* Price */
+
+.bcc-price {
+    margin-top: 8px;
+
+    color: var(--pc-green);
+
+    font-size: 23px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+
+/* Difference */
+
+.bcc-diff {
+    margin-top: 4px;
+
+    color: var(--pc-text-muted);
+
+    font-size: 12px;
+    line-height: 1.4;
+
+    overflow-wrap: anywhere;
+}
+
+
+/* Message */
+
+.bcc-message {
+    width: 100%;
+    min-width: 0;
+
+    margin: 15px 0 18px;
+
+    color: var(--pc-text-secondary);
+
+    font-size: 13px;
+    line-height: 1.6;
+
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+
+/* =========================================================
+   ACTION BUTTONS
+   ========================================================= */
+
+.bcc-actions {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    width: 100%;
+    min-width: 0;
+
+    gap: 10px;
+
+    margin-top: auto;
+}
+
+
+.btn-action {
+    width: 100%;
+    min-width: 0;
+
+    min-height: 40px;
+
+    padding: 9px 12px;
+
+    border: 1px solid transparent;
+    border-radius: var(--pc-radius-sm);
+
+    box-sizing: border-box;
+
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+
+    white-space: nowrap;
+
+    cursor: pointer;
+
+    transition:
+        background var(--pc-transition),
+        border-color var(--pc-transition),
+        transform var(--pc-transition);
+}
+
+
+/* Accept */
+
+.btn-accept {
+    color: var(--pc-green);
+
+    background: rgba(32, 215, 160, 0.10);
+
+    border-color: rgba(32, 215, 160, 0.22);
+}
+
+
+.btn-accept:hover {
+    background: rgba(32, 215, 160, 0.17);
+
+    transform: translateY(-1px);
+}
+
+
+/* Reject */
+
+.btn-reject {
+    color: var(--pc-red);
+
+    background: rgba(239, 83, 80, 0.10);
+
+    border-color: rgba(239, 83, 80, 0.22);
+}
+
+
+.btn-reject:hover {
+    background: rgba(239, 83, 80, 0.17);
+
+    transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .bid-comparison {
+        padding: 16px;
+    }
+
+
+    .bid-comparison-grid {
+        grid-template-columns: 1fr;
+    }
+
+
+    .bid-comp-card {
+        padding: 16px;
+    }
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+    /* =========================
+       BADGES
+       ========================= */
+
+    .badge {
+        display: inline-flex;
+
+        align-items: center;
+        justify-content: center;
+
+        max-width: 100%;
+
+        min-height: 26px;
+
+        padding: 4px 8px;
+
+        border-radius: 999px;
+
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1.2;
+
+        white-space: nowrap;
+
+        box-sizing: border-box;
+    }
+
+
+    /* =========================
+       EMPTY STATE
+       ========================= */
+
+    .premium-empty-state {
+        width: 100%;
+        min-width: 0;
+
+        min-height: 220px;
+
+        padding: 24px 16px;
+
+        box-sizing: border-box;
+    }
+
+
+    .premium-empty-state.compact {
+        min-height: 170px;
+
+        padding: 20px 14px;
+    }
+
+
+    .empty-state-icon-wrapper {
+        width: 48px;
+        height: 48px;
+
+        margin-bottom: 12px;
+
+        border-radius: 12px;
+    }
+
+
+    .empty-state-icon {
+        font-size: 21px;
+    }
+
+
+    .empty-state-title {
+        margin: 0 0 7px;
+
+        font-size: 16px;
+        line-height: 1.3;
+
+        text-align: center;
+    }
+
+
+    .empty-state-description {
+        width: 100%;
+        max-width: 100%;
+
+        margin: 0;
+
+        font-size: 12px;
+        line-height: 1.5;
+
+        text-align: center;
+
+        overflow-wrap: anywhere;
+    }
+
+
+    .empty-state-btn {
+        width: 100%;
+        max-width: 220px;
+
+        margin-top: 14px;
+    }
+
+
+    /* =========================
+       BID COMPARISON
+       ========================= */
+
+    .bid-comparison {
+        width: 100%;
+        min-width: 0;
+
+        padding: 14px;
+
+        border-radius: 14px;
+
+        box-sizing: border-box;
+    }
+
+
+    .bid-comparison-header {
+        display: flex;
+
+        flex-direction: column;
+        align-items: flex-start;
+
+        width: 100%;
+        min-width: 0;
+
+        gap: 5px;
+
+        margin-bottom: 14px;
+    }
+
+
+    .bch-title {
+        max-width: 100%;
+
+        font-size: 14px;
+        line-height: 1.3;
+
+        overflow-wrap: anywhere;
+    }
+
+
+    .bch-sub {
+        width: 100%;
+        max-width: 100%;
+
+        font-size: 11px;
+        line-height: 1.45;
+
+        text-align: left;
+
+        overflow-wrap: anywhere;
+    }
+
+
+    /* =========================
+       COMPARISON GRID
+       ========================= */
+
+    .bid-comparison-grid {
+        display: grid;
+
+        grid-template-columns: minmax(0, 1fr);
+
+        gap: 12px;
+
+        width: 100%;
+        min-width: 0;
+
+        align-items: start;
+    }
+
+
+    /* =========================
+       BID CARD
+       ========================= */
+
+    .bid-comp-card {
+        width: 100%;
+        min-width: 0;
+
+        height: auto;
+
+        padding: 14px;
+
+        border-radius: 13px;
+
+        box-sizing: border-box;
+
+        overflow: hidden;
+
+        display: flex;
+        flex-direction: column;
+    }
+
+
+    .best-value-tag {
+        max-width: 100%;
+
+        font-size: 10px;
+
+        white-space: nowrap;
+    }
+
+
+    .bcc-name {
+        max-width: 100%;
+
+        font-size: 14px;
+        line-height: 1.3;
+
+        overflow-wrap: anywhere;
+    }
+
+
+    .bcc-price {
+        margin-top: 7px;
+
+        font-size: 21px;
+        line-height: 1.2;
+    }
+
+
+    .bcc-diff {
+        margin-top: 4px;
+
+        font-size: 11px;
+        line-height: 1.4;
+    }
+
+
+    .bcc-message {
+        width: 100%;
+        min-width: 0;
+
+        margin: 13px 0 15px;
+
+        font-size: 12px;
+        line-height: 1.55;
+
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+
+    /* =========================
+       ACTION BUTTONS
+       ========================= */
+
+    .bcc-actions {
+        display: grid;
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+        width: 100%;
+        min-width: 0;
+
+        gap: 8px;
+
+        margin-top: auto;
+    }
+
+
+    .btn-action {
+        width: 100%;
+        min-width: 0;
+
+        min-height: 38px;
+
+        padding: 8px 9px;
+
+        border-radius: 9px;
+
+        font-size: 11px;
+        line-height: 1.2;
+
+        box-sizing: border-box;
+
+        white-space: nowrap;
+    }
+}
+
+
+/* =========================================================
+   VERY SMALL PHONES
+   ========================================================= */
+
+@media (max-width: 380px) {
+
+    .premium-empty-state {
+        padding: 20px 12px;
+    }
+
+
+    .premium-empty-state.compact {
+        padding: 18px 12px;
+    }
+
+
+    .bid-comparison {
+        padding: 11px;
+    }
+
+
+    .bid-comp-card {
+        padding: 12px;
+    }
+
+
+    .bch-title {
+        font-size: 13px;
+    }
+
+
+    .bch-sub {
+        font-size: 10px;
+    }
+
+
+    .bcc-price {
+        font-size: 20px;
+    }
+
+
+    .bcc-message {
+        font-size: 11px;
+    }
+
+
+    .bcc-actions {
+        gap: 7px;
+    }
+
+
+    .btn-action {
+        min-height: 36px;
+
+        padding: 7px 6px;
+
+        font-size: 10px;
+    }
+}
+
+
+/* =========================================================
+   ACCESSIBILITY
+   ========================================================= */
+
+.btn-action:focus-visible,
+.empty-state-btn:focus-visible {
+    outline: 2px solid var(--pc-blue-light);
+
+    outline-offset: 2px;
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .bid-comp-card,
+    .btn-action,
+    .empty-state-btn {
+        transition: none;
+    }
+}

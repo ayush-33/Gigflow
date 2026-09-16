@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/api";
 import { useNotifications } from "../context/NotificationContext";
 import toast from "react-hot-toast";
+import ConfirmModal from "../components/ConfirmModal";
 import "../styles/Notifications.css";
 
 /* ── Type metadata ── */
@@ -95,22 +96,7 @@ function groupNotifications(notifs) {
 
 
 
-/* ── Confirm Modal ── */
-function ConfirmModal({ isOpen, title, body, onConfirm, onCancel }) {
-  if (!isOpen) return null;
-  return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-title">{title}</div>
-        <div className="modal-body">{body}</div>
-        <div className="modal-actions">
-          <button className="modal-btn-cancel" onClick={onCancel}>Cancel</button>
-          <button className="modal-btn-confirm" onClick={onConfirm}>Confirm</button>
-        </div>
-      </div>
-    </div>
-  );
-}
+
 
 export default function Notifications() {
   const navigate = useNavigate();
@@ -377,6 +363,7 @@ const { notifications, markOneAsRead, markAllRead, fetchNotifications } = useNot
                               <button
                                 className="notif-control-btn mark-read"
                                 title="Mark as read"
+                                aria-label="Mark as read"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   markOneAsRead(n._id);
@@ -387,6 +374,7 @@ const { notifications, markOneAsRead, markAllRead, fetchNotifications } = useNot
                             <button
                               className="notif-control-btn delete"
                               title="Delete"
+                              aria-label="Delete notification"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 deleteNotif(n._id);
@@ -407,11 +395,8 @@ const { notifications, markOneAsRead, markAllRead, fetchNotifications } = useNot
 
 
       <ConfirmModal
-        isOpen={!!modal}
-        title={modal?.title}
-        body={modal?.body}
-        onConfirm={modal?.onConfirm}
-        onCancel={() => setModal(null)}
+        modal={modal}
+        onClose={() => setModal(null)}
       />
     </div>
   );

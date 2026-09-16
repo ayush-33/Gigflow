@@ -2,8 +2,10 @@ import axios from "axios";
 import { getAccessToken, setAccessToken, clearAccessToken } from "../utils/auth";
 import { connectSocket } from "../utils/socket";
 
+const BACKEND_URL = "http://localhost:5001";
+
 const api = axios.create({
-  baseURL: "http://localhost:5001/api",
+  baseURL: `${BACKEND_URL}/api`,
   withCredentials: true,
 });
 
@@ -15,6 +17,7 @@ const processQueue = (error, token = null) => {
     if (error) prom.reject(error);
     else prom.resolve(token);
   });
+
   failedQueue = [];
 };
 
@@ -47,9 +50,6 @@ api.interceptors.response.use(
     if (original._retry) return Promise.reject(error);
     original._retry = true;
 
-    console.log("🔄 Token expired, attempting refresh...");  // ← add this
-
-
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         failedQueue.push({ resolve, reject });
@@ -65,7 +65,7 @@ api.interceptors.response.use(
 
     try {
       const { data } = await axios.post(
-        "http://localhost:5001/api/auth/refresh",
+        `${BACKEND_URL}/api/auth/refresh`,
         {},
         { withCredentials: true }
       );

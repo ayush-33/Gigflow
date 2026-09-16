@@ -1,155 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/api";
+import GigCard from "../components/GigCard";
 import "../styles/Home.css";
-
-/* ── Helpers ── */
-function StarRating({ score = 0 }) {
-  const full  = Math.floor(score);
-  const half  = score % 1 >= 0.5 ? 1 : 0;
-  const empty = 5 - full - half;
-  return (
-    <span className="stars">
-      {"★".repeat(full)}{half ? "½" : ""}{"☆".repeat(empty)}
-    </span>
-  );
-}
-
-// ✅ FIX: same helper as Explore — handles both legacy /uploads/file and bare filename
-function buildImageUrl(image) {
-  if (!image) return null;
-
-  // Already a full URL (http or https)
-  if (image.startsWith('http://') || image.startsWith('https://')) {
-    return image;
-  }
-
-  // Windows absolute path
-  if (image.includes('\\')) {
-    const filename = image.split('\\').pop();
-    return `http://localhost:5001/uploads/${filename}`;
-  }
-
-  // Unix absolute path
-  if (image.includes('/uploads/')) {
-    const filename = image.split('/uploads/').pop();
-    return `http://localhost:5001/uploads/${filename}`;
-  }
-
-  // Relative path starting with uploads/
-  if (image.startsWith('uploads/')) {
-    return `http://localhost:5001/${image}`;
-  }
-
-  // Plain filename only
-  return `http://localhost:5001/uploads/${image}`;
-}
-
-/* ── Gig Card ── */
-function GigCard({ gig, onNavigate, saved, onToggleSave }) {
-  const [imgError, setImgError] = useState(false);
-
-  const guessIcon = () => {
-    const t = (gig.title || "").toLowerCase();
-    if (t.includes("logo") || t.includes("design"))  return "🎨";
-    if (t.includes("web")  || t.includes("website")) return "💻";
-    if (t.includes("video"))                         return "🎬";
-    if (t.includes("seo"))                           return "🔍";
-    if (t.includes("write") || t.includes("content")) return "✍️";
-    if (t.includes("music") || t.includes("audio"))   return "🎵";
-    return "💼";
-  };
-
-  // ✅ FIX: useMemo so mock values don't re-randomise on every render
-  const { rating, reviewCount } = useMemo(() => ({
-    rating:      gig.rating      ?? parseFloat((4 + Math.random()).toFixed(1)),
-    reviewCount: gig.reviewCount ?? Math.floor(Math.random() * 120 + 5),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [gig._id]);
-
-  const imageUrl   = buildImageUrl(gig.image);
-  const isAssigned = ["assigned", "hired", "in_progress", "submitted", "completed"].includes(gig.status);
-
-  return (
-    <div className="gig-card" onClick={() => onNavigate(`/gig/${gig._id}`)}>
-
-      <div className="gig-image-wrapper">
-        {!imgError && imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={gig.title}
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <div className="gig-image-fallback">
-            <span className="fallback-icon">{guessIcon()}</span>
-            <span className="fallback-label">No Preview</span>
-          </div>
-        )}
-
-        {gig.category && (
-          <span className="gig-category-tag">{gig.category}</span>
-        )}
-
-        <button
-          className={`gig-wishlist-btn${saved ? " saved" : ""}`}
-          onClick={(e) => { e.stopPropagation(); onToggleSave(gig._id); }}
-          title={saved ? "Remove from saved" : "Save gig"}
-        >
-          {saved ? "❤️" : "🤍"}
-        </button>
-
-        {gig.status === "open" ? (
-          <span className="gig-open-badge-home">✓ Open</span>
-        ) : gig.status === "submitted" ? (
-          <span className="gig-hired-badge-home" style={{ background: "rgba(139,92,246,0.85)", color: "#fff" }}>📤 Under Review</span>
-        ) : gig.status === "completed" ? (
-          <span className="gig-hired-badge-home" style={{ background: "rgba(16, 185, 129, 0.85)", color: "#fff", borderColor: "rgba(16, 185, 129, 0.5)" }}>✅ Completed</span>
-        ) : ["in_progress", "hired"].includes(gig.status) ? (
-          <span className="gig-hired-badge-home" style={{ background: "rgba(245, 158, 11, 0.85)", color: "#fff", borderColor: "rgba(245, 158, 11, 0.5)" }}>🔨 In Progress</span>
-        ) : isAssigned ? (
-          <span className="gig-hired-badge-home">🔒 Hired</span>
-        ) : (
-          <span className="gig-open-badge-home">✓ Open</span>
-        )}
-      </div>
-
-      <div className="gig-content">
-        <div className="gig-seller">
-          <div className="seller-avatar">👤</div>
-          <span className="seller-name">
-            {gig.ownerId?.name || gig.ownerId?.username || "Unknown"}
-          </span>
-        </div>
-
-        <h3 className="gig-title">{gig.title}</h3>
-
-        <div className="gig-rating">
-          <StarRating score={rating} />
-          <span className="rating-score">{Number(rating).toFixed(1)}</span>
-          <span className="reviews">({reviewCount})</span>
-        </div>
-
-        <div className="gig-footer">
-          <div className="gig-price-block">
-            <span className="gig-price-label">Starting at</span>
-            <span className="gig-price">${gig.price}</span>
-          </div>
-          <button
-            className="gig-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              onNavigate(`/gig/${gig._id}`);
-            }}
-          >
-            View Gig
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ── Home Page ── */
 export default function Home() {
@@ -264,8 +118,9 @@ export default function Home() {
           </div>
           <div className="categories-grid">
             {categories.map((cat) => (
-              <div
+              <button
                 key={cat.id}
+                type="button"
                 className="category-card"
                 onClick={() =>
                   navigate(`/explore?category=${encodeURIComponent(cat.name)}&page=1`)
@@ -273,7 +128,7 @@ export default function Home() {
               >
                 <div className="category-icon">{cat.icon}</div>
                 <h3 className="category-name">{cat.name}</h3>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -306,7 +161,7 @@ export default function Home() {
           ) : (
             <div className="gigs-grid">
               {gigs.map((gig) => (
-                <GigCard key={gig._id} gig={gig} onNavigate={navigate} saved={savedGigIds.has(gig._id)} onToggleSave={toggleSave} />
+                <GigCard key={gig._id} gig={gig} saved={savedGigIds.has(gig._id)} onToggleSave={toggleSave} />
               ))}
             </div>
           )}
@@ -346,7 +201,7 @@ export default function Home() {
             <button className="cta-btn-primary" onClick={() => navigate("/explore")}>
               Browse Gigs
             </button>
-            <button className="cta-btn-primary" onClick={() => navigate("/become-seller")}>
+            <button className="cta-btn-secondary" onClick={() => navigate("/become-seller")}>
               Become a Seller
             </button>
           </div>

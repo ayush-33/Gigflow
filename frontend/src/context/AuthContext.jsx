@@ -1,9 +1,11 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { setAccessToken, clearAccessToken } from "../utils/auth";
 import api from "../api/api";
-import { connectSocket, disconnectSocket } from "../utils/socket";
+import { connectSocket, disconnectSocket, onSocketChange } from "../utils/socket";
 
 const AuthContext = createContext(null);
+
+let restorePromise = null;
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -17,6 +19,8 @@ export function AuthProvider({ children }) {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
+    let active = true;
+
     const restore = async () => {
       const savedUser = localStorage.getItem("user");
 
@@ -26,7 +30,12 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const { data } = await api.post("/auth/refresh");
+        if (!restorePromise) {
+          restorePromise = api.post("/auth/refresh");
+        }
+        const { data } = await restorePromise;
+
+        if (!active) return;
 
         if (data?.accessToken) {
           setAccessToken(data.accessToken);
@@ -43,42 +52,69 @@ export function AuthProvider({ children }) {
         }
 
       } catch (err) {
-        console.error("Auth restore failed:", err);
-
-        clearAccessToken();
-        localStorage.removeItem("user");
-        setUser(null);
+        if (active) {
+          console.error("Auth restore failed:", err);
+          clearAccessToken();
+          localStorage.removeItem("user");
+          setUser(null);
+        }
       } finally {
-        setAuthReady(true);
+        restorePromise = null;
+        if (active) {
+          setAuthReady(true);
+        }
       }
     };
 
     restore();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const login = (accessToken, userData) => {
+  // ✅ Keep socket React state synchronized when socket client changes (e.g. after refresh token)
+  useEffect(() => {
+    const unsubscribe = onSocketChange((newSocket) => {
+      setSocket(newSocket);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const login = useCallback((accessToken, userData) => {
     setAccessToken(accessToken);
     localStorage.setItem("user", JSON.stringify(userData));
     setUser(userData);
     const s = connectSocket();
     setSocket(s);
-  };
+  }, []);
 
-  const logout = async () => {
-    try { await api.post("/auth/logout"); } catch {}
+  const logout = useCallback(async () => {
+    try { await api.post("/auth/logout"); } catch { }
     clearAccessToken();
     localStorage.removeItem("user");
     disconnectSocket();
     setSocket(null);
     setUser(null);
-  };
+  }, []);
+
+  const providerValue = useMemo(() => ({
+    user,
+    setUser,
+    login,
+    logout,
+    authReady,
+    socket
+  }), [user, login, logout, authReady, socket]);
 
   // ✅ Don't render children until auth state is restored
   // This prevents profile/protected pages from firing API calls before token is ready
   if (!authReady) return <div>Loading...</div>;
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, logout, authReady, socket }}>
+    <AuthContext.Provider value={providerValue}>
       {children}
     </AuthContext.Provider>
   );
