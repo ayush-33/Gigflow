@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge, EmptyState } from "./ProfileCommon";
 import api from "../../api/api";
 import toast from "react-hot-toast";
+import "../../styles/mybids.css";
 
 export default function MyBidsTab({
   bids,
@@ -17,6 +18,7 @@ export default function MyBidsTab({
   fetchAll,
 }) {
   const navigate = useNavigate();
+  const [expandedBidId, setExpandedBidId] = useState(null);
 
   const filteredBids = bids.filter(bid => {
     if (bidsFilter === "all") return true;
@@ -65,11 +67,14 @@ export default function MyBidsTab({
           sub={`No bids found with "${bidsFilter}" status.`}
         />
       ) : (
-        <div className="my-gigs-grid">
+        <div className="my-bids-grid">
           {filteredBids.map((bid) => {
             const isLastOfferByMe = bid.lastOfferBy === user?._id || bid.lastOfferBy === profile?._id;
             return (
-              <div className="bid-card-new premium-dashboard-card" key={bid._id}>
+              <div
+                className={`my-bid-card ${expandedBidId === bid._id ? "is-expanded" : ""}`}
+                key={bid._id}
+              >
                 {/* Header */}
                 <div className="card-header-section">
                   <div className="received-bid-header">
@@ -129,11 +134,33 @@ export default function MyBidsTab({
                     </div>
                   </div>
 
-                  <div className="bid-proposal-section">
-                    <span className="bid-proposal-label">Proposal Message</span>
-                    <p className="card-description-clamp-3">
+                  <div className="my-bid-description-section">
+                    <span className="my-bid-description-label">
+                      Description
+                    </span>
+
+                    <p
+                      className={`my-bid-description ${expandedBidId === bid._id ? "expanded" : ""
+                        }`}
+                    >
                       {bid.message}
                     </p>
+
+                    {bid.message && bid.message.length > 180 && (
+                      <button
+                        type="button"
+                        className="my-bid-see-more"
+                        onClick={() =>
+                          setExpandedBidId(
+                            expandedBidId === bid._id ? null : bid._id
+                          )
+                        }
+                      >
+                        {expandedBidId === bid._id
+                          ? "Show less"
+                          : "See full description"}
+                      </button>
+                    )}
                   </div>
 
                   {bid.revisionNotes && (

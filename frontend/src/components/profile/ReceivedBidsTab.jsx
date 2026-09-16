@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge, EmptyState, BidComparisonView } from "./ProfileCommon";
-
+import "../../styles/receivedbids.css";
 // Helper for freelancer rating mock
 const getFreelancerRating = (id) => {
   if (!id) return "5.0";

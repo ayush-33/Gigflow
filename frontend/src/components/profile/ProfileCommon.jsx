@@ -1,4 +1,5 @@
 import React from "react";
+import "../../styles/profileCommon.css";
 
 /* ── Status badge ── */
 export function Badge({ status }) {

@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge, EmptyState } from "./ProfileCommon";
-
+import "../../styles/dashboard.css";
 export default function DashboardTab({
   profile,
   notifications,

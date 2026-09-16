@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge, EmptyState } from "./ProfileCommon";
-
+import "../../styles/mygigs.css";
 // Helper for views count mock
 const getViewsCount = (id) => {
   if (!id) return 0;
@@ -102,9 +102,19 @@ export default function MyGigsTab({
 
                 {/* Content */}
                 <div className="card-content-section">
-                  <p className="card-description-clamp-3">
-                    {gig.description}
-                  </p>
+                  <div className="my-gig-description-wrapper">
+                    <p className="card-description-clamp-4">
+                      {gig.description}
+                    </p>
+
+                    <button
+                      type="button"
+                      className="my-gig-see-more"
+                      onClick={() => navigate(`/gig/${gig._id}`)}
+                    >
+                      See more
+                    </button>
+                  </div>
 
                   <div className="my-gig-card-meta-grid">
                     <div className="my-gig-card-meta-item">

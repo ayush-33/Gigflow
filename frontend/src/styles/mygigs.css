@@ -1,0 +1,848 @@
+/* ==========================================================================
+   My Gigs Tab — mygigs.css
+   Equal-height cards, clamped descriptions, footer pinned under divider,
+   responsive desktop / tablet / mobile layout.
+   ========================================================================== */
+
+
+/* ==========================================================================
+   SECTION WRAPPER
+   ========================================================================== */
+
+.section-card {
+    background: #12141c;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.section-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 16px;
+}
+
+.section-card-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.section-card-title-icon {
+    font-size: 20px;
+}
+
+.section-card-action {
+    background: none;
+    border: none;
+    color: #4f8ff7;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 6px 4px;
+}
+
+.section-card-action:hover {
+    text-decoration: underline;
+}
+
+
+/* ==========================================================================
+   FILTERS
+   ========================================================================== */
+
+.section-card-filters {
+    margin-bottom: 20px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.segmented-filters {
+    display: inline-flex;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 6px;
+    border-radius: 12px;
+    min-width: min-content;
+}
+
+.filter-btn {
+    border: none;
+    background: transparent;
+    color: #9aa3b2;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    text-transform: capitalize;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.filter-btn:hover {
+    color: #fff;
+}
+
+.filter-btn.active {
+    background: #3b7cf6;
+    color: #fff;
+}
+
+
+/* ==========================================================================
+   GIG GRID
+   ========================================================================== */
+
+.my-gigs-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    align-items: stretch;
+}
+
+
+/* ==========================================================================
+   GIG CARD
+   ========================================================================== */
+
+.my-gig-card-new {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 0;
+    background: #171923;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 14px;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.my-gig-card-new:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+
+/* ==========================================================================
+   CARD HEADER
+   ========================================================================== */
+
+.card-header-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.card-title-badges-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.my-gig-card-category-tag {
+    background: rgba(79, 143, 247, 0.12);
+    color: #4f8ff7;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 999px;
+    text-transform: capitalize;
+    white-space: nowrap;
+}
+
+.card-title-clamp-2 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.35;
+    cursor: pointer;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+
+    /* Reserve exactly two title lines */
+    min-height: calc(1.35em * 2);
+}
+
+.card-title-clamp-2:hover {
+    color: #6ea2ff;
+}
+
+.my-gig-card-posted-date {
+    font-size: 12.5px;
+    color: #7b8494;
+}
+
+
+/* ==========================================================================
+   CARD CONTENT
+   ========================================================================== */
+
+.card-content-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 0 0 auto;
+}
+
+.my-gig-description-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+
+/* ==========================================================================
+   DESCRIPTION
+   ========================================================================== */
+
+.card-description-clamp-4 {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.55;
+    color: #a7adb9;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+
+    /* Keep description area the same height */
+    min-height: calc(1.55em * 4);
+}
+
+
+/* ==========================================================================
+   SEE MORE
+   ========================================================================== */
+
+.my-gig-see-more {
+    align-self: flex-start;
+    background: none;
+    border: none;
+    color: #4f8ff7;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+}
+
+.my-gig-see-more:hover {
+    text-decoration: underline;
+}
+
+
+/* ==========================================================================
+   META GRID
+   ========================================================================== */
+
+.my-gig-card-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    padding: 12px 10px;
+}
+
+.my-gig-card-meta-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+}
+
+.my-gig-card-meta-label {
+    font-size: 11px;
+    color: #7b8494;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.my-gig-card-meta-val {
+    font-size: 14px;
+    font-weight: 700;
+    color: #e6e8ec;
+}
+
+.my-gig-card-meta-val.price {
+    color: #3ecf8e;
+}
+
+.my-gig-card-meta-val.highlight {
+    color: #6ea2ff;
+}
+
+
+/* ==========================================================================
+   HIRED INDICATOR
+   ========================================================================== */
+
+.my-gig-activity-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #c7cbd4;
+}
+
+.activity-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #3ecf8e;
+    flex-shrink: 0;
+}
+
+.activity-dot.active {
+    box-shadow: 0 0 0 3px rgba(62, 207, 142, 0.2);
+}
+
+
+/* ==========================================================================
+   SPACER
+   Keeps the footer at the bottom of every card.
+   DO NOT REMOVE.
+   ========================================================================== */
+
+.spacer-grow {
+    flex: 1 1 auto;
+    min-height: 8px;
+}
+
+
+/* ==========================================================================
+   FOOTER + DIVIDER
+   ========================================================================== */
+
+.card-footer-section {
+    flex: 0 0 auto;
+
+    /* No unnecessary space above the divider */
+    padding-top: 0;
+
+    /* Horizontal divider */
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+
+/* ==========================================================================
+   ACTION BUTTON ROW
+   ========================================================================== */
+
+.card-actions-group {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+
+    /* Small, consistent gap between divider and buttons */
+    margin-top: 8px;
+}
+
+.toolbar-btn {
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 8px;
+    min-height: 42px;
+
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.toolbar-btn:hover {
+    filter: brightness(1.1);
+}
+
+.toolbar-btn:active {
+    transform: scale(0.97);
+}
+
+
+/* ==========================================================================
+   BUTTON COLORS
+   ========================================================================== */
+
+.btn-primary {
+    background: #3b7cf6;
+    color: #fff;
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e6e8ec;
+}
+
+.btn-danger {
+    background: rgba(240, 82, 82, 0.12);
+    color: #f05252;
+}
+
+.btn-success {
+    background: rgba(62, 207, 142, 0.14);
+    color: #3ecf8e;
+}
+
+
+/* ==========================================================================
+   BADGES
+   ========================================================================== */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.badge::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.badge-open {
+    background: rgba(79, 143, 247, 0.12);
+    color: #4f8ff7;
+}
+
+.badge-completed {
+    background: rgba(62, 207, 142, 0.12);
+    color: #3ecf8e;
+}
+
+.badge-closed {
+    background: rgba(255, 255, 255, 0.08);
+    color: #9aa3b2;
+}
+
+.badge-hired,
+.badge-in_progress {
+    background: rgba(255, 184, 76, 0.12);
+    color: #ffb84c;
+}
+
+.badge-submitted {
+    background: rgba(180, 130, 255, 0.14);
+    color: #b482ff;
+}
+
+
+/* ==========================================================================
+   EMPTY STATE
+   ========================================================================== */
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 48px 16px;
+    color: #9aa3b2;
+}
+
+.empty-state-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+}
+
+.empty-state-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #e6e8ec;
+    margin-bottom: 6px;
+}
+
+.empty-state-sub {
+    font-size: 13.5px;
+    max-width: 340px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+
+.empty-state-action {
+    background: #3b7cf6;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+
+/* ==========================================================================
+   FLUID SIZING
+   ========================================================================== */
+
+.section-card-title {
+    font-size: clamp(16px, 1.1vw + 13px, 20px);
+}
+
+.card-title-clamp-2 {
+    font-size: clamp(15px, 0.6vw + 14px, 17px);
+}
+
+.card-description-clamp-4 {
+    font-size: clamp(13px, 0.25vw + 12.5px, 14px);
+}
+
+
+/* ==========================================================================
+   WIDE DESKTOP
+   ========================================================================== */
+
+@media (min-width: 1440px) {
+    .my-gigs-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 24px;
+    }
+}
+
+
+/* ==========================================================================
+   STANDARD DESKTOP / SMALL LAPTOP
+   ========================================================================== */
+
+@media (max-width: 1199px) {
+    .my-gigs-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+    }
+}
+
+
+/* ==========================================================================
+   TABLET LANDSCAPE
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+    .section-card {
+        padding: 20px;
+    }
+
+    .my-gigs-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+    }
+}
+
+
+/* ==========================================================================
+   TABLET PORTRAIT / PHABLET
+   ========================================================================== */
+
+@media (max-width: 900px) and (min-width: 601px) {
+    .my-gigs-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+    }
+}
+
+
+/* ==========================================================================
+   SMALL TABLET
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .section-card {
+        padding: 18px;
+    }
+
+    .section-card-header {
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .my-gig-card-meta-grid {
+        padding: 11px 8px;
+        gap: 8px;
+    }
+}
+
+
+/* ==========================================================================
+   MOBILE / PHABLET
+   ========================================================================== */
+
+@media (max-width: 600px) {
+    .section-card {
+        padding: 18px 16px;
+    }
+
+    .my-gigs-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+}
+
+
+/* ==========================================================================
+   MOBILE PHONES
+   ========================================================================== */
+
+@media (max-width: 480px) {
+    .section-card {
+        padding: 16px 14px;
+        border-radius: 12px;
+    }
+
+    .section-card-header {
+        padding-bottom: 14px;
+        margin-bottom: 14px;
+    }
+
+    .section-card-action {
+        font-size: 13px;
+    }
+
+    .segmented-filters {
+        gap: 6px;
+        padding: 5px;
+    }
+
+    .filter-btn {
+        padding: 7px 12px;
+        font-size: 12.5px;
+    }
+
+    .my-gig-card-new {
+        border-radius: 12px;
+    }
+
+    .card-header-section {
+        margin-bottom: 12px;
+    }
+
+    .my-gig-card-category-tag {
+        font-size: 11.5px;
+        padding: 4px 9px;
+    }
+
+    .card-content-section {
+        gap: 12px;
+    }
+
+    .my-gig-card-meta-grid {
+        grid-template-columns: repeat(3, 1fr);
+        padding: 10px 6px;
+        gap: 6px;
+    }
+
+    .my-gig-card-meta-label {
+        font-size: 10px;
+    }
+
+    .my-gig-card-meta-val {
+        font-size: 13px;
+    }
+
+    .my-gig-activity-indicator {
+        font-size: 12.5px;
+    }
+
+    /* Keep divider and buttons close together */
+    .card-footer-section {
+        padding-top: 0;
+    }
+
+    .card-actions-group {
+        margin-top: 8px;
+    }
+
+    .toolbar-btn {
+        padding: 11px 8px;
+        font-size: 13.5px;
+    }
+
+    /* 3 lines on small phones */
+    .card-description-clamp-4 {
+        -webkit-line-clamp: 3;
+        min-height: calc(1.55em * 3);
+    }
+}
+
+
+/* ==========================================================================
+   EXTRA SMALL PHONES
+   ========================================================================== */
+
+@media (max-width: 375px) {
+    .section-card {
+        padding: 14px 12px;
+    }
+
+    .section-card-title-icon {
+        font-size: 18px;
+    }
+
+    .my-gig-card-category-tag {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+
+    .my-gig-card-meta-grid {
+        grid-template-columns: repeat(3, 1fr);
+        padding: 9px 4px;
+        gap: 4px;
+    }
+
+    .my-gig-card-meta-label {
+        font-size: 9.5px;
+        letter-spacing: 0;
+    }
+
+    .my-gig-card-meta-val {
+        font-size: 12.5px;
+    }
+
+    .toolbar-btn {
+        padding: 10px 6px;
+        font-size: 13px;
+    }
+}
+
+
+/* ==========================================================================
+   LANDSCAPE PHONES
+   ========================================================================== */
+
+@media (max-height: 480px) and (orientation: landscape) {
+    .card-description-clamp-4 {
+        -webkit-line-clamp: 2;
+        min-height: calc(1.55em * 2);
+    }
+}
+
+
+/* ==========================================================================
+   TOUCH DEVICES
+   ========================================================================== */
+
+@media (hover: none) and (pointer: coarse) {
+    .toolbar-btn {
+        padding-top: 12px;
+        padding-bottom: 12px;
+        min-height: 42px;
+    }
+
+    .filter-btn {
+        min-height: 36px;
+    }
+
+    .my-gig-see-more {
+        padding: 6px 0;
+    }
+}
+
+/* ==========================================================================
+   MOBILE — STACK GIG ACTION BUTTONS VERTICALLY
+   ========================================================================== */
+
+/* ==========================================================================
+   MOBILE — STACK ALL GIG ACTIONS VERTICALLY
+   ========================================================================== */
+
+/* ==========================================================================
+   MOBILE — GIG ACTIONS
+   ========================================================================== */
+
+@media (max-width: 600px) {
+
+    /* Let each gig card grow according to its content */
+    .my-gig-card-new {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    /* Disable desktop equal-height spacer behavior */
+    .my-gig-card-new .spacer-grow {
+        flex: 0 0 8px !important;
+        height: 8px !important;
+        min-height: 8px !important;
+    }
+
+    /* Footer must contain all 3 buttons */
+    .my-gig-card-new .card-footer-section {
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        flex: 0 0 auto !important;
+    }
+
+    /* THREE buttons, vertically */
+    .my-gig-card-new .card-footer-section .card-actions-group {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        grid-template-rows: repeat(3, 42px) !important;
+        grid-auto-rows: 42px !important;
+
+        width: 100% !important;
+        height: auto !important;
+        min-height: 138px !important;
+
+        gap: 8px !important;
+        margin-top: 8px !important;
+
+        overflow: visible !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Every button gets its own row */
+    .my-gig-card-new .card-footer-section .card-actions-group .toolbar-btn {
+        display: flex !important;
+        width: 100% !important;
+
+        height: 42px !important;
+        min-height: 42px !important;
+        max-height: 42px !important;
+
+        margin: 0 !important;
+        padding: 0 12px !important;
+
+        align-items: center !important;
+        justify-content: center !important;
+
+        box-sizing: border-box !important;
+
+        font-size: 13px !important;
+        line-height: 1 !important;
+        white-space: nowrap !important;
+    }
+}

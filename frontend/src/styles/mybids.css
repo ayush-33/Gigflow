@@ -1,0 +1,777 @@
+/* ==========================================================================
+   My Bids Tab — mybids.css
+   Responsive layout for the My Bids dashboard.
+   Mobile fixes:
+   - filter controls are evenly aligned
+   - action buttons stay inside the card
+   - buttons are compact instead of oversized
+   - bid cards remain readable on narrow screens
+   - spacer/footer structure is preserved
+   ========================================================================== */
+
+:root {
+    --text-primary: #ffffff;
+    --text-secondary: #c7cbd4;
+    --text-muted: #8b93a3;
+    --danger: #f05252;
+    --accent: #4f8ff7;
+    --success: #3ecf8e;
+    --purple: #a56bff;
+
+    --mybids-section-bg: #12141c;
+    --mybids-card-bg: #171923;
+    --mybids-border: rgba(255, 255, 255, 0.07);
+    --mybids-divider: rgba(255, 255, 255, 0.08);
+}
+
+/* ---------- Section ---------- */
+
+.section-card:has(.my-bids-grid) {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    background: var(--mybids-section-bg);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 24px;
+}
+
+.section-card:has(.my-bids-grid) .section-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--mybids-divider);
+}
+
+.section-card:has(.my-bids-grid) .section-card-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    color: var(--text-primary);
+    font-size: clamp(16px, 1.1vw + 13px, 20px);
+    font-weight: 700;
+}
+
+.section-card:has(.my-bids-grid) .section-card-title-icon {
+    flex: 0 0 auto;
+    font-size: 20px;
+}
+
+/* ---------- Filters ---------- */
+
+.section-card:has(.my-bids-grid) .section-card-filters {
+    width: 100%;
+    min-width: 0;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.section-card:has(.my-bids-grid) .section-card-filters::-webkit-scrollbar {
+    display: none;
+}
+
+.section-card:has(.my-bids-grid) .segmented-filters {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: max-content;
+    min-width: min-content;
+    padding: 6px;
+    box-sizing: border-box;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.section-card:has(.my-bids-grid) .filter-btn {
+    flex: 0 0 auto;
+    min-height: 36px;
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 16px;
+    background: transparent;
+    color: #9aa3b2;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-transform: capitalize;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.section-card:has(.my-bids-grid) .filter-btn:hover {
+    color: #ffffff;
+}
+
+.section-card:has(.my-bids-grid) .filter-btn.active {
+    background: #3b7cf6;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(59, 124, 246, 0.2);
+}
+
+/* ---------- Grid ---------- */
+
+.my-bids-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    align-items: start;
+    gap: 20px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+/* ---------- Bid Card ---------- */
+
+.my-bid-card {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 18px;
+    background: #171923;
+    border: 1px solid var(--mybids-border);
+    border-radius: 14px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.my-bid-card:hover {
+    border-color: rgba(79, 143, 247, 0.22);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+}
+
+.my-bid-card.is-expanded {
+    overflow: visible;
+}
+
+/* ---------- Profile / Header ---------- */
+
+.my-bid-card .card-header-section {
+    min-width: 0;
+}
+
+.received-bid-header,
+.freelancer-profile-row,
+.freelancer-info-block {
+    min-width: 0;
+}
+
+.freelancer-profile-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.freelancer-avatar-large {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #3b7cf6;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.freelancer-info-block {
+    flex: 1 1 auto;
+}
+
+.freelancer-name {
+    margin: 0;
+    color: #e9ebef;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.freelancer-meta-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.3;
+}
+
+.bid-card-title-link {
+    display: block;
+    min-width: 0;
+    margin-top: 18px;
+    color: var(--text-muted);
+    font-size: 13.5px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.gig-link {
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.gig-link:hover {
+    text-decoration: underline;
+}
+
+/* ---------- Content ---------- */
+
+.card-content-section {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+/* ---------- Bid Details ---------- */
+
+.bid-card-details-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 12px 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+}
+
+.bid-detail-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    gap: 4px;
+    text-align: center;
+}
+
+.bid-detail-label {
+    min-width: 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.2;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.bid-detail-value {
+    min-width: 0;
+    color: #e6e8ec;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: nowrap;
+}
+
+.bid-detail-value.price {
+    color: var(--success);
+}
+
+/* ---------- Proposal Message ---------- */
+
+.bid-proposal-section {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 8px;
+}
+
+.bid-proposal-label {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.my-bid-description,
+.card-description-clamp-3 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    min-width: 0;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.my-bid-description.expanded,
+.card-description-clamp-3.expanded {
+    display: block;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+}
+
+.my-bid-see-more {
+    align-self: flex-start;
+    border: 0;
+    padding: 4px 0 0;
+    background: transparent;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+    cursor: pointer;
+}
+
+.my-bid-see-more:hover {
+    text-decoration: underline;
+}
+
+/* ---------- Revision Notes ---------- */
+
+.revision-notes-container {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    background: rgba(240, 82, 82, 0.08);
+    border: 1px solid rgba(240, 82, 82, 0.2);
+    border-radius: 10px;
+    overflow-wrap: anywhere;
+}
+
+.revision-notes-container .info-label {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--danger);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.revision-notes-container p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+/* ---------- Spacer ---------- */
+
+.my-bid-card .spacer-grow {
+    flex: 1 1 auto;
+    min-height: 16px;
+}
+
+/* ---------- Footer / Actions ---------- */
+
+.my-bid-card .card-footer-section {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding-top: 10px;
+    border-top: 1px solid var(--mybids-divider);
+}
+
+.my-bid-card .card-actions-group {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    gap: 8px;
+}
+
+.my-bid-card .card-actions-group.cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.my-bid-card .card-actions-group.cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.my-bid-card .toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    box-sizing: border-box;
+    padding: 9px 10px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.my-bid-card .toolbar-btn:hover {
+    filter: brightness(1.08);
+}
+
+.my-bid-card .toolbar-btn:active {
+    transform: translateY(1px);
+}
+
+.my-bid-card .btn-primary {
+    background: #3b7cf6;
+    border-color: #3b7cf6;
+    color: #ffffff;
+}
+
+.my-bid-card .btn-secondary {
+    background: #22252e;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #e8eaf0;
+}
+
+.my-bid-card .btn-danger {
+    background: rgba(240, 82, 82, 0.1);
+    border-color: rgba(240, 82, 82, 0.35);
+    color: #ff7777;
+}
+
+.my-bid-card .btn-success {
+    background: rgba(62, 207, 142, 0.1);
+    border-color: rgba(62, 207, 142, 0.3);
+    color: #56dda0;
+}
+
+.my-bid-card .btn-purple {
+    background: rgba(165, 107, 255, 0.12);
+    border-color: rgba(165, 107, 255, 0.35);
+    color: #b98aff;
+}
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+
+@media (min-width: 1440px) {
+    .my-bids-grid {
+        grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+        gap: 24px;
+    }
+}
+
+@media (max-width: 1199px) {
+    .my-bids-grid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 18px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .section-card:has(.my-bids-grid) {
+        padding: 20px;
+    }
+
+    .my-bids-grid {
+        grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+        gap: 16px;
+    }
+
+    .my-bid-card {
+        padding: 18px;
+    }
+}
+
+@media (max-width: 900px) and (min-width: 601px) {
+    .my-bids-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .section-card:has(.my-bids-grid) {
+        padding: 18px 16px;
+        border-radius: 14px;
+    }
+
+    .section-card:has(.my-bids-grid) .section-card-header {
+        gap: 10px;
+        padding-bottom: 14px;
+        margin-bottom: 14px;
+    }
+
+    .section-card:has(.my-bids-grid) .section-card-title {
+        font-size: 17px;
+    }
+
+    .my-bids-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    .my-bid-card {
+        padding: 16px;
+    }
+
+    .bid-card-details-grid {
+        padding: 11px 8px;
+        gap: 8px;
+    }
+}
+
+/* ---------- Mobile phones ---------- */
+
+@media (max-width: 600px) {
+    .section-card:has(.my-bids-grid) {
+        width: 100%;
+        max-width: 100%;
+        padding: 16px 14px;
+        margin: 0;
+        box-sizing: border-box;
+    }
+
+    .section-card:has(.my-bids-grid) .section-card-filters {
+        margin-bottom: 16px;
+        overflow: visible;
+    }
+
+    /* FIX: perfectly aligned 2-column filter layout */
+    .section-card:has(.my-bids-grid) .segmented-filters {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+        min-width: 0;
+        gap: 4px;
+        padding: 4px;
+        border-radius: 12px;
+        box-sizing: border-box;
+    }
+
+    .section-card:has(.my-bids-grid) .filter-btn {
+        width: 100%;
+        min-width: 0;
+        min-height: 34px;
+        padding: 7px 8px;
+        border-radius: 8px;
+        font-size: 12.5px;
+        line-height: 1.2;
+        text-align: center;
+    }
+
+    .my-bid-card {
+        padding: 14px;
+        border-radius: 12px;
+    }
+
+    .freelancer-profile-row {
+        gap: 10px;
+    }
+
+    .freelancer-avatar-large {
+        width: 38px;
+        height: 38px;
+        font-size: 15px;
+    }
+
+    .freelancer-name {
+        font-size: 14.5px;
+    }
+
+    .freelancer-meta-row {
+        gap: 5px;
+        font-size: 11.5px;
+    }
+
+    .bid-card-title-link {
+        margin-top: 14px !important;
+        font-size: 13px !important;
+        line-height: 1.45;
+    }
+
+    .card-content-section {
+        gap: 12px;
+        margin-top: 14px;
+    }
+
+    .bid-card-details-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        padding: 10px 6px;
+        gap: 6px;
+    }
+
+    .bid-detail-label {
+        font-size: 9.5px;
+        letter-spacing: 0.02em;
+    }
+
+    .bid-detail-value {
+        font-size: 12.5px;
+    }
+
+    .card-description-clamp-3,
+    .my-bid-description {
+        -webkit-line-clamp: 3;
+        font-size: 13.5px;
+        line-height: 1.55;
+    }
+
+    .bid-proposal-label {
+        font-size: 10.5px;
+    }
+
+    .revision-notes-container {
+        padding: 9px 10px;
+    }
+
+    /* FIX: keep the spacer and keep footer below it */
+    .my-bid-card .spacer-grow {
+        min-height: 14px;
+    }
+
+    .my-bid-card .card-footer-section {
+        padding-top: 10px;
+    }
+
+    /*
+       FIX: compact action buttons.
+       Three-action groups use 2 columns on phones, preventing horizontal
+       overflow while keeping each button usable.
+    */
+    .my-bid-card .card-actions-group {
+        gap: 7px;
+    }
+
+    .my-bid-card .card-actions-group.cols-3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .my-bid-card .card-actions-group.cols-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .my-bid-card .toolbar-btn {
+        min-height: 38px;
+        padding: 8px 7px;
+        border-radius: 8px;
+        font-size: 12px;
+    }
+}
+
+/* ---------- Very small phones ---------- */
+
+@media (max-width: 375px) {
+    .section-card:has(.my-bids-grid) {
+        padding: 14px 12px;
+    }
+
+    .section-card:has(.my-bids-grid) .segmented-filters {
+        gap: 3px;
+        padding: 4px;
+    }
+
+    .section-card:has(.my-bids-grid) .filter-btn {
+        min-height: 33px;
+        padding: 6px 5px;
+        font-size: 11.5px;
+    }
+
+    .my-bid-card {
+        padding: 13px;
+    }
+
+    .freelancer-avatar-large {
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+    }
+
+    .freelancer-name {
+        font-size: 14px;
+    }
+
+    .bid-card-details-grid {
+        padding: 9px 4px;
+        gap: 4px;
+    }
+
+    .bid-detail-label {
+        font-size: 9px;
+    }
+
+    .bid-detail-value {
+        font-size: 12px;
+    }
+
+    .my-bid-card .toolbar-btn {
+        min-height: 36px;
+        padding: 7px 5px;
+        font-size: 11.5px;
+    }
+}
+
+/* ---------- Landscape phones ---------- */
+
+@media (max-height: 480px) and (orientation: landscape) {
+
+    .card-description-clamp-3,
+    .my-bid-description {
+        -webkit-line-clamp: 2;
+    }
+
+    .my-bid-card {
+        padding: 14px;
+    }
+}
+
+/* ---------- Touch devices ---------- */
+
+@media (hover: none) and (pointer: coarse) {
+    .section-card:has(.my-bids-grid) .filter-btn {
+        min-height: 36px;
+    }
+
+    .my-bid-card .toolbar-btn {
+        min-height: 40px;
+    }
+
+    .my-bid-see-more {
+        padding: 5px 0;
+    }
+}
+
+/* ---------- Accessibility ---------- */
+
+.section-card:has(.my-bids-grid) .filter-btn:focus-visible,
+.my-bid-card .toolbar-btn:focus-visible,
+.my-bid-card .my-bid-see-more:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .my-bid-card,
+    .filter-btn,
+    .toolbar-btn {
+        transition: none;
+    }
+}
