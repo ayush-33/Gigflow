@@ -4,9 +4,100 @@ import {
   generateSuggestedSkills,
   generateProposal as generateProposalAI
 } from "../services/aiService.js";
+import { GeminiError } from "../services/geminiClient.js";
 import Gig from "../models/gig.js";
 import User from "../models/user.js";
 import Bid from "../models/bid.js";
+
+const handleAiError = (res, error, feature, defaultUnavailableMsg) => {
+  console.error(`[AI Controller] ${feature} error:`, error.message);
+
+  if (error instanceof GeminiError) {
+    // 429 - Gemini rate limit
+    if (
+      error.code === "AI_RATE_LIMITED" ||
+      error.status === 429
+    ) {
+      return res.status(429).json({
+        message:
+          "AI service is temporarily rate limited. Please try again shortly.",
+        code: "AI_RATE_LIMITED",
+      });
+    }
+
+    // 400 - Invalid request
+    if (
+      error.code === "AI_BAD_REQUEST" ||
+      error.status === 400
+    ) {
+      return res.status(400).json({
+        message: "Invalid request to AI service.",
+        code: "AI_BAD_REQUEST",
+      });
+    }
+
+    // 401 / 403 - API key or permission/configuration problem
+    if (
+      error.code === "AI_CONFIGURATION_ERROR" ||
+      error.status === 401 ||
+      error.status === 403
+    ) {
+      return res.status(500).json({
+        message: "AI service is currently unavailable.",
+        code: "AI_CONFIGURATION_ERROR",
+      });
+    }
+
+    // 404 - Model/endpoint does not exist
+    if (
+      error.code === "AI_MODEL_NOT_FOUND" ||
+      error.status === 404
+    ) {
+      return res.status(500).json({
+        message: "AI service configuration is invalid.",
+        code: "AI_MODEL_NOT_FOUND",
+      });
+    }
+
+    // 408 / 503 / 500 / 502 / 504
+    // These are temporary failures after retries have been exhausted.
+    if (
+      error.code === "AI_TIMEOUT" ||
+      error.code === "AI_TEMPORARILY_UNAVAILABLE" ||
+      error.status === 408 ||
+      error.status === 500 ||
+      error.status === 502 ||
+      error.status === 503 ||
+      error.status === 504
+    ) {
+      return res.status(503).json({
+        message: defaultUnavailableMsg,
+        code: "AI_TEMPORARILY_UNAVAILABLE",
+      });
+    }
+
+    // Unknown Gemini error
+    return res.status(502).json({
+      message: "AI generation failed. Please try again.",
+      code: "AI_REQUEST_FAILED",
+    });
+  }
+  if (
+    error.message?.includes("GEMINI_API_KEY") ||
+    error.message?.includes("GEMINI_PROPOSAL_API_KEY") ||
+    error.message?.includes("misconfigured")
+  ) {
+    return res.status(500).json({
+      message: "AI service is currently unavailable.",
+      code: "AI_CONFIGURATION_ERROR"
+    });
+  }
+
+  return res.status(503).json({
+    message: defaultUnavailableMsg,
+    code: "AI_TEMPORARILY_UNAVAILABLE"
+  });
+};
 
 // In-memory rate limiting map
 // key: `${userId}:${type}` -> value: array of timestamp numbers
@@ -86,7 +177,10 @@ export const generateGigDescription = async (req, res) => {
     // 3. API Key check (Fail early before calling the service)
     if (!process.env.GEMINI_API_KEY) {
       console.error("AI Generation Error: GEMINI_API_KEY environment variable is missing.");
-      return res.status(500).json({ message: "AI description generation is currently misconfigured." });
+      return res.status(500).json({
+        message: "AI service is currently unavailable.",
+        code: "AI_CONFIGURATION_ERROR"
+      });
     }
 
     // 4. Invoke AI Generation Service
@@ -102,17 +196,12 @@ export const generateGigDescription = async (req, res) => {
     return res.status(200).json(result);
 
   } catch (error) {
-    console.error("AI Generation Error details:", error.message);
-    
-    // Check if it's a config issue
-    if (error.message.includes("GEMINI_API_KEY")) {
-      return res.status(500).json({ message: "AI description generation is currently misconfigured." });
-    }
-
-    // Return friendly status 502 for provider failures, timeouts, etc.
-    return res.status(502).json({
-      message: "AI description generation failed. You can try again or write manually."
-    });
+    return handleAiError(
+      res,
+      error,
+      "description",
+      "AI description generation is temporarily unavailable. You can write the description manually or try again."
+    );
   }
 };
 
@@ -158,7 +247,10 @@ export const suggestSkills = async (req, res) => {
     // 3. API Key check
     if (!process.env.GEMINI_API_KEY) {
       console.error("AI Skill Suggestion Error: GEMINI_API_KEY environment variable is missing.");
-      return res.status(500).json({ message: "AI skill suggestion is currently misconfigured." });
+      return res.status(500).json({
+        message: "AI service is currently unavailable.",
+        code: "AI_CONFIGURATION_ERROR"
+      });
     }
 
     // 4. Invoke AI Generation Service
@@ -174,13 +266,12 @@ export const suggestSkills = async (req, res) => {
 
     return res.status(200).json(result);
   } catch (error) {
-    console.error("AI Skill Suggestion Error details:", error.message);
-    if (error.message.includes("GEMINI_API_KEY")) {
-      return res.status(500).json({ message: "AI skill suggestion is currently misconfigured." });
-    }
-    return res.status(502).json({
-      message: "AI skill suggestion failed. You can add skills manually."
-    });
+    return handleAiError(
+      res,
+      error,
+      "skills",
+      "AI suggestions are temporarily unavailable. You can add skills manually or try again."
+    );
   }
 };
 
@@ -355,7 +446,8 @@ export const generateProposal = async (req, res) => {
     if (!process.env.GEMINI_PROPOSAL_API_KEY) {
       console.error("AI Proposal Error: GEMINI_PROPOSAL_API_KEY environment variable is missing.");
       return res.status(500).json({
-        message: "AI proposal generation is currently misconfigured."
+        message: "AI service is currently unavailable.",
+        code: "AI_CONFIGURATION_ERROR"
       });
     }
 
@@ -414,17 +506,12 @@ export const generateProposal = async (req, res) => {
     return res.status(200).json(result);
 
   } catch (error) {
-    console.error("AI Proposal Generation Error details:", error.message);
-
-    if (error.message.includes("GEMINI_PROPOSAL_API_KEY")) {
-      return res.status(500).json({
-        message: "AI proposal generation is currently misconfigured."
-      });
-    }
-
-    return res.status(502).json({
-      message: "AI proposal generation failed. You can write your proposal manually."
-    });
+    return handleAiError(
+      res,
+      error,
+      "proposal",
+      "AI proposal generation is temporarily unavailable. You can write the proposal manually or try again."
+    );
   }
 };
 

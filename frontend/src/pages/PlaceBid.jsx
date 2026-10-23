@@ -35,7 +35,7 @@ export default function PlaceBid() {
       console.error("AI proposal generation error:", err);
       toast.error(
         err.response?.data?.message ||
-        "Failed to generate proposal. You can write your proposal manually."
+        "AI proposal generation is temporarily unavailable. You can write the proposal manually or try again."
       );
     } finally {
       setProposalLoading(false);

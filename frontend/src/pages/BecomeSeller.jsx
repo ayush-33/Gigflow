@@ -89,7 +89,10 @@ export default function BecomeSeller() {
       }
     } catch (err) {
       console.error("AI Generation failed:", err);
-      toast.error(err.response?.data?.message || "AI description generation failed. You can try again or write manually.");
+      toast.error(
+        err.response?.data?.message ||
+        "AI description generation is temporarily unavailable. You can write the description manually or try again."
+      );
     } finally {
       setAiLoading(false);
     }
@@ -182,7 +185,7 @@ export default function BecomeSeller() {
       console.error("AI Skill suggestion failed:", err);
       toast.error(
         err.response?.data?.message ||
-        "AI skill suggestions are temporarily unavailable. You can add skills manually."
+        "AI suggestions are temporarily unavailable. You can add skills manually or try again."
       );
     } finally {
       setAiSkillsLoading(false);

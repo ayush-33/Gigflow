@@ -1,6 +1,9 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+import { callGemini, GeminiError } from "./geminiClient.js";
+export { GeminiError };
+
 /**
  * Generates a professional freelance gig description based on user inputs.
  *
@@ -237,9 +240,6 @@ Remember:
 - Return only the final description.
 `;
 
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
   const payload = {
     contents: [
       {
@@ -267,23 +267,12 @@ Remember:
     }
   };
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload)
+  const data = await callGemini({
+    apiKey,
+    model,
+    payload,
+    feature: "description"
   });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-
-    throw new Error(
-      `Gemini API error: ${response.status} - ${errorBody}`
-    );
-  }
-
-  const data = await response.json();
 
   const candidate = data.candidates?.[0];
 
@@ -418,9 +407,6 @@ Example:
 - Category: "${category}"
 - Existing Skills: ${JSON.stringify(existingSkills)}`;
 
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
   const payload = {
     contents: [
       {
@@ -444,23 +430,12 @@ Example:
     }
   };
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload)
+  const data = await callGemini({
+    apiKey,
+    model,
+    payload,
+    feature: "skills"
   });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-
-    throw new Error(
-      `Gemini API error: ${response.status} - ${errorBody}`
-    );
-  }
-
-  const data = await response.json();
 
   const generatedText =
     data.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -614,7 +589,10 @@ export const generateProposal = async ({
     );
   }
 
-  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+  const model =
+    process.env.GEMINI_PROPOSAL_MODEL ||
+    process.env.GEMINI_MODEL ||
+    "gemini-3.5-flash";
 
   const hasRelevantExperience =
     Array.isArray(completedProjects) &&
@@ -816,10 +794,6 @@ NEVER exceed 1200 characters.
 Return ONLY the proposal text.
 `;
 
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/` +
-    `${model}:generateContent?key=${apiKey}`;
-
   const payload = {
     contents: [
       {
@@ -848,25 +822,12 @@ Return ONLY the proposal text.
     }
   };
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload)
+  const data = await callGemini({
+    apiKey,
+    model,
+    payload,
+    feature: "proposal"
   });
-  console.log("Gemini status:", response.status);
-
-  const responseBody = await response.text();
-
-  console.log("Gemini response:", responseBody);
-  if (!response.ok) {
-    throw new Error(
-      `Gemini API error: ${response.status} - ${responseBody}`
-    );
-  }
-
-  const data = JSON.parse(responseBody);
 
   const finishReason = data.candidates?.[0]?.finishReason;
 
