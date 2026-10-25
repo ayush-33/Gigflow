@@ -80,7 +80,15 @@ const { data } = await api.get(`/gigs/${id}`);
           deliveryTime: data.deliveryTime || "",
           tags:         Array.isArray(data.tags) ? data.tags : [],
         });
-        if (data.image) setPreview(`http://localhost:5001/uploads/${data.image}`);
+        if (data.image) {
+          setPreview(
+            data.image.startsWith("http://") || data.image.startsWith("https://")
+              ? data.image
+              : data.image.startsWith("/uploads/")
+                ? `http://localhost:5001${data.image}`
+                : `http://localhost:5001/uploads/${data.image}`
+          );
+        }
       } catch {
         showToast("Failed to load gig data.", "error");
       } finally {

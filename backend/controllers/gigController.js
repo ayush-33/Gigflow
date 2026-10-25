@@ -3,6 +3,7 @@ import Bid from "../models/bid.js";
 import { notifyUser } from "../utils/notifyUser.js";
 import { io } from "../server.js";
 import { syncBidToConversation } from "../utils/conversationHelper.js";
+import { uploadStream, deleteFromCloudinary } from "../services/cloudinary.js";
 
 /* ── Helper: sanitise image path ── */
 // Ensures we ONLY store the filename (e.g. "abc123.jpg") in the DB.
@@ -40,14 +41,22 @@ const validateGig = ({ title, description, price, deliveryTime, category, tags }
 
 /* ---------- Create Gig ---------- */
 export const createGig = async (req, res) => {
+  let uploadedCloudinaryId = null;
   try {
     const { title, category, description, price, deliveryTime, tags } = req.body;
 
     const errors = validateGig({ title, category, description, price, deliveryTime, tags });
     if (errors.length) return res.status(400).json({ message: errors[0], errors });
 
-    // ✅ FIX: store ONLY the filename, not the full path
-    const image = getFilename(req.file);
+    let image = null;
+    let cloudinaryId = null;
+
+    if (req.file) {
+      const uploadResult = await uploadStream(req.file.buffer);
+      image = uploadResult.secure_url;
+      cloudinaryId = uploadResult.public_id;
+      uploadedCloudinaryId = uploadResult.public_id;
+    }
 
     const parsedTags = typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : (Array.isArray(tags) ? tags : []);
 
@@ -58,6 +67,7 @@ export const createGig = async (req, res) => {
       price: Number(price),
       deliveryTime: Number(deliveryTime),
       image,
+      cloudinaryId,
       ownerId: req.userId,
       status: "open",
       tags: parsedTags
@@ -65,6 +75,13 @@ export const createGig = async (req, res) => {
 
     res.status(201).json(gig);
   } catch (error) {
+    if (uploadedCloudinaryId) {
+      try {
+        await deleteFromCloudinary(uploadedCloudinaryId);
+      } catch (cleanupErr) {
+        console.error("Failed to clean up Cloudinary asset after gig creation failure:", cleanupErr.message);
+      }
+    }
     res.status(500).json({ message: error.message });
   }
 };
@@ -155,6 +172,16 @@ export const deleteGig = async (req, res) => {
 
     // Also remove all bids for this gig
     await Bid.deleteMany({ gigId: gig._id });
+
+    // If gig has an associated Cloudinary asset, clean it up safely
+    if (gig.cloudinaryId) {
+      try {
+        await deleteFromCloudinary(gig.cloudinaryId);
+      } catch (cloudErr) {
+        console.error(`Failed to delete Cloudinary asset ${gig.cloudinaryId} on gig deletion:`, cloudErr.message);
+      }
+    }
+
     await gig.deleteOne();
 
     res.json({ message: "Gig deleted successfully" });
@@ -165,6 +192,7 @@ export const deleteGig = async (req, res) => {
 
 /* ---------- Update Gig ---------- */
 export const updateGig = async (req, res) => {
+  let uploadedCloudinaryId = null;
   try {
     const gig = await Gig.findById(req.params.id);
 
@@ -187,12 +215,35 @@ export const updateGig = async (req, res) => {
       tags: parsedTags,
     };
 
-    // ✅ FIX: store ONLY the filename
-    if (req.file) updatedData.image = getFilename(req.file);
+    const oldCloudinaryId = gig.cloudinaryId;
+
+    if (req.file) {
+      const uploadResult = await uploadStream(req.file.buffer);
+      updatedData.image = uploadResult.secure_url;
+      updatedData.cloudinaryId = uploadResult.public_id;
+      uploadedCloudinaryId = uploadResult.public_id;
+    }
 
     const updatedGig = await Gig.findByIdAndUpdate(req.params.id, updatedData, { new: true });
+
+    // If replacement succeeded and previous image was on Cloudinary, delete old asset
+    if (req.file && oldCloudinaryId) {
+      try {
+        await deleteFromCloudinary(oldCloudinaryId);
+      } catch (cleanupErr) {
+        console.error("Failed to delete previous Cloudinary asset during update:", cleanupErr.message);
+      }
+    }
+
     res.json(updatedGig);
   } catch (error) {
+    if (uploadedCloudinaryId) {
+      try {
+        await deleteFromCloudinary(uploadedCloudinaryId);
+      } catch (cleanupErr) {
+        console.error("Failed to clean up newly uploaded Cloudinary asset after update failure:", cleanupErr.message);
+      }
+    }
     res.status(500).json({ message: error.message });
   }
 };

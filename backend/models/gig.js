@@ -30,6 +30,11 @@ const gigSchema = new mongoose.Schema({
     type: String
   },
 
+  cloudinaryId: {
+    type: String,
+    default: null
+  },
+
   ownerId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",

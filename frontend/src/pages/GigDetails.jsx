@@ -126,11 +126,13 @@ export default function GigDetails() {
   const rating = gig.rating || 0;
 const reviewCount = gig.reviewCount || 0;
 
-  // ✅ FIX: image path — backend now stores ONLY filename, so prepend full URL here
+  // Image path: support Cloudinary absolute URLs as well as legacy local uploads
   const imageUrl = gig.image
-    ? gig.image.startsWith("/uploads/")
-      ? `http://localhost:5001${gig.image}`         // legacy: already has /uploads/
-      : `http://localhost:5001/uploads/${gig.image}` // new: just filename
+    ? gig.image.startsWith("http://") || gig.image.startsWith("https://")
+      ? gig.image
+      : gig.image.startsWith("/uploads/")
+        ? `http://localhost:5001${gig.image}`         // legacy: already has /uploads/
+        : `http://localhost:5001/uploads/${gig.image}` // legacy: just filename
     : null;
 
   // ✅ FIX: isAssigned is now visible to ALL visitors (not just owner)
