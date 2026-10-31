@@ -92,8 +92,9 @@ export const mapStatusToErrorCode = (status) => {
     case 401:
       return "AI_CONFIGURATION_ERROR";
     case 403:
+      return "AI_CONFIGURATION_ERROR";
     case 404:
-      return "AI_REQUEST_FAILED";
+      return "AI_MODEL_NOT_FOUND";
     case 408:
       return "AI_TIMEOUT";
     case 429:

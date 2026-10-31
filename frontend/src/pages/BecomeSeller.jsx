@@ -53,23 +53,84 @@ const validate = (step, form) => {
   return errors;
 };
 
+const STORAGE_KEY = "gigflow_become_seller_draft";
+
+const getSavedDraft = () => {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") return parsed;
+  } catch (err) {
+    console.warn("Failed to read draft from sessionStorage:", err);
+  }
+  return null;
+};
+
 export default function BecomeSeller() {
   const navigate = useNavigate();
 
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(() => {
+    const draft = getSavedDraft();
+    if (draft && Number.isInteger(draft.step) && draft.step >= 0 && draft.step < STEPS.length) {
+      return draft.step;
+    }
+    return 0;
+  });
+
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const [form, setForm] = useState({
-    gigTitle: "", category: "", description: "",
-    price: "", deliveryTime: "", image: null,
-    tags: []
+  const [form, setForm] = useState(() => {
+    const draft = getSavedDraft();
+    return {
+      gigTitle: typeof draft?.gigTitle === "string" ? draft.gigTitle : "",
+      category: typeof draft?.category === "string" ? draft.category : "",
+      description: typeof draft?.description === "string" ? draft.description : "",
+      price: draft?.price !== undefined && draft?.price !== null ? String(draft.price) : "",
+      deliveryTime: draft?.deliveryTime !== undefined && draft?.deliveryTime !== null ? String(draft.deliveryTime) : "",
+      image: null,
+      tags: Array.isArray(draft?.tags) ? draft.tags.filter((t) => typeof t === "string") : [],
+    };
   });
-  const [tagInput, setTagInput] = useState("");
+
+  const [tagInput, setTagInput] = useState(() => {
+    const draft = getSavedDraft();
+    return typeof draft?.tagInput === "string" ? draft.tagInput : "";
+  });
+
   const [modal, setModal] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSkills, setAiSkills] = useState([]);
   const [aiSkillsLoading, setAiSkillsLoading] = useState(false);
+
+  // Auto-save draft changes to sessionStorage
+  useEffect(() => {
+    try {
+      const draft = {
+        step,
+        gigTitle: form.gigTitle,
+        category: form.category,
+        description: form.description,
+        price: form.price,
+        deliveryTime: form.deliveryTime,
+        tags: form.tags,
+        tagInput,
+      };
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+    } catch (err) {
+      console.warn("Failed to save draft to sessionStorage:", err);
+    }
+  }, [
+    step,
+    form.gigTitle,
+    form.category,
+    form.description,
+    form.price,
+    form.deliveryTime,
+    form.tags,
+    tagInput,
+  ]);
 
   const triggerAiRequest = async () => {
     setAiLoading(true);
@@ -253,6 +314,12 @@ export default function BecomeSeller() {
       await api.post("/gigs", fd, {
         headers: { "Content-Type": "multipart/form-data" }
       });
+
+      try {
+        sessionStorage.removeItem(STORAGE_KEY);
+      } catch (err) {
+        console.warn("Failed to clear draft from sessionStorage:", err);
+      }
 
       showToast("Gig published successfully! 🎉");
 

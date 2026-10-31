@@ -349,8 +349,8 @@
 }
 
 .bid-price-wrap:focus-within {
-  border-color: var(--bid-border-focus);
-  box-shadow: 0 0 0 3px rgba(124, 108, 255, 0.18);
+  border-color: var(--bid-border);
+  box-shadow: none;
 }
 
 .bid-price-symbol {
@@ -879,4 +879,9 @@
   .bid-card-inner {
     padding: 42px 48px 46px;
   }
+}
+
+.bid-input--price:focus {
+  outline: none;
+  box-shadow: none;
 }
